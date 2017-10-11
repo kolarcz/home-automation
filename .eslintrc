@@ -1,0 +1,15 @@
+{
+  "plugins": [],
+  "extends" : ["airbnb-base"],
+  "rules": {
+    "arrow-parens": ["error", "always"],
+    "comma-dangle": ["error", "never"],
+    "import/no-extraneous-dependencies": ["error", { "devDependencies": true }],
+    "no-console": ["error", { "allow": ["info"] }],
+    "no-empty": ["error", { "allowEmptyCatch": true }],
+    "no-plusplus": 0,
+    "no-restricted-syntax": ["error", "BinaryExpression[operator='in']"],
+    "no-shadow": 0
+  },
+  "globals": {}
+}
