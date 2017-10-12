@@ -67,6 +67,9 @@ let tempAlertLast = 0;
 let tempAlerts = 0;
 
 temp.on('change', (state) => {
+  const { inRange } = bt.getState();
+  if (inRange) return;
+
   const actualTemp = state.inside.temp;
   const diff = Math.abs(actualTemp - tempAlertLast);
 
@@ -90,6 +93,9 @@ bt.on('change', (state) => {
   if (!state.inRange) {
     firstMove = false;
     swtch.send('A', false);
+
+    tempAlertLast = 0;
+    tempAlerts = 0;
   }
 });
 
