@@ -1,6 +1,7 @@
 const express = require('express');
 const expressBasicAuth = require('express-basic-auth');
 const dateformat = require('dateformat');
+const execSync = require('child_process').execSync;
 
 require('dotenv').config({
   path: `${__dirname}/../.env`
@@ -201,12 +202,15 @@ app.get('/workflow/info', (req, res) => {
   const lightState = swtch.getState();
   const btState = bt.getState();
 
+  const uptime = new Date(execSync('uptime -s').toString());
+
   res.send(`
     ${emoticons.thermometer} ${tempState.inside.temp ? `${tempState.inside.temp} °C` : '?'} &nbsp;
     ${tempState.outside.temp ? `${emoticons[tempState.outside.temp_icon]} ${tempState.outside.temp} °C` : `${emoticons.weather} ?`} &nbsp;
     ${tempState.outside.pop ? `${emoticons[tempState.outside.pop_icon]} ${tempState.outside.pop} %` : `${emoticons.rain} ?`} &nbsp;
     ${lightState.A ? emoticons.light_on : emoticons.light_off}<br>
-    🏃 ${dateformat(pirState.last, 'd. m. yyyy H:MM:ss')} &nbsp; 🔔 ${firstMove ? 'y' : 'n'} &nbsp; 📍 ${btState.inRange ? 'in' : 'out'}
+    🏃 ${dateformat(pirState.last, 'd. m. yyyy H:MM:ss')} &nbsp; 🔔 ${firstMove ? 'y' : 'n'} &nbsp; 📍 ${btState.inRange ? 'in' : 'out'}<br>
+    🕰 ${dateformat(uptime, 'd. m. yyyy H:MM:ss')}
   `);
 });
 
