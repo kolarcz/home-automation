@@ -47,6 +47,7 @@ const temp = new Temp(
 );
 const clock = new Clock(
   process.env.CLOCK_IP_ADDRESS,
+  process.env.CLOCK_API_KEY,
   process.env.CLOCK_TOKEN
 );
 const bt = new Bt(
@@ -128,7 +129,7 @@ sun.on('sunset', () => {
 const actualizeClockAppLight = () => {
   const lightState = swtch.getState().A;
 
-  clock.setApp('light', [{
+  clock.pushState('light', [{
     icon: lightState ? icons.light_on : icons.light_off,
     text: lightState ? 'off' : 'on'
   }]);
@@ -154,7 +155,7 @@ const actualizeClockAppWeather = () => {
     icon: icons.wind
   }); */
 
-  clock.setApp('weather', data);
+  clock.pushState('weather', data);
 };
 
 setInterval(actualizeClockAppLight, 60 * 1000);
@@ -188,6 +189,16 @@ app.get('/workflow/light-on', (req, res) => {
 app.get('/workflow/light-off', (req, res) => {
   swtch.send('A', false);
   actualizeClockAppLight();
+  res.send('ok');
+});
+
+app.get('/workflow/radio-play', (req, res) => {
+  clock.sendAction('radio.play');
+  res.send('ok');
+});
+
+app.get('/workflow/radio-stop', (req, res) => {
+  clock.sendAction('radio.stop');
   res.send('ok');
 });
 
