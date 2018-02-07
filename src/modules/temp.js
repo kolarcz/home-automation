@@ -18,7 +18,9 @@ module.exports = class Temp extends EventEmitter {
 
     this.state = {
       inside: { temp: false },
-      outside: { temp: false, icon: false, rain: false, wind: false }
+      outside: {
+        temp: false, icon: false, rain: false, wind: false
+      }
     };
 
     if (pinPower) {

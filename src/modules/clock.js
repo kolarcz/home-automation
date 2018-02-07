@@ -10,7 +10,7 @@ module.exports = class Clock {
     this.customApps = {
       light: 'com.lametric.d5c4cf7d936b78ec26550431a4609e6c/1',
       weather: 'com.lametric.4204a2222b86d7e187f624a55f927209/3'
-    }
+    };
   }
 
   sendAction(action, params = {}) {
