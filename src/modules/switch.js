@@ -41,7 +41,7 @@ module.exports = class Switch extends EventEmitter {
 
     const index = (letter.charCodeAt(0) - 65) + 5;
 
-    let message = `${this.code}FFFFF${(turnOn ? 'F0' : '0F')}`;
+    let message = `${this.code.replace(/0/g, 'F')}FFFFF${(turnOn ? 'F0' : '0F')}`;
     message = `${message.substr(0, index)}0${message.substr(index + 1)}`;
 
     piswitch.send(message, 'tristate');
