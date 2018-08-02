@@ -170,9 +170,16 @@ actualizeClockAppWeather();
 
 const app = express();
 
-app.use(expressBasicAuth({
-  users: { [process.env.USERNAME]: process.env.PASSWORD }
-}));
+app.use((req, res, next) => {
+  const token = process.env.ACCESS_TOKEN;
+  if (typeof token === 'string' && token.length && token === req.query.token) {
+    next();
+  } else {
+    expressBasicAuth({
+      users: { [process.env.USERNAME]: process.env.PASSWORD }
+    })(req, res, next);
+  }
+});
 
 app.get('/lametric/light', (req, res) => {
   swtch.send('A', !swtch.getState().A);
