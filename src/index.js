@@ -2,6 +2,9 @@ const express = require('express');
 const expressBasicAuth = require('express-basic-auth');
 const dateformat = require('dateformat');
 const execSync = require('child_process').execSync;
+const vsprintf = require('sprintf-js').vsprintf;
+const osUtils = require('os-utils');
+const wiringPi = require('wiring-pi');
 
 require('dotenv').config({
   path: `${__dirname}/../.env`
@@ -9,11 +12,12 @@ require('dotenv').config({
 
 const { icons, emoticons } = require('./icons');
 
+const Lcd = require('lcd');
 
 const Switch = require('./modules/switch');
 const Pir = require('./modules/pir');
-// const Pc = require('./modules/pc');
-const Temp = require('./modules/temp');
+const TempWunder = require('./modules/temp-wunder');
+const TempDHT22 = require('./modules/temp-dht22');
 const Clock = require('./modules/clock');
 const Bt = require('./modules/bt');
 const Sun = require('./modules/sun');
@@ -23,6 +27,19 @@ const Notify = require('./modules/notify');
 /* ************************************************************************************************
  INSTANCES
  ************************************************************************************************ */
+
+const lcd = new Lcd({
+  rs: process.env.LCD_PIN_RS,
+  e: process.env.LCD_PIN_E,
+  data: [
+    process.env.LCD_PIN_DATA_DB4,
+    process.env.LCD_PIN_DATA_DB5,
+    process.env.LCD_PIN_DATA_DB6,
+    process.env.LCD_PIN_DATA_DB7
+  ],
+  cols: 16,
+  rows: 2
+});
 
 const swtch = new Switch(
   +process.env.SWITCH_PIN_POWER,
@@ -34,16 +51,14 @@ const pir = new Pir(
   +process.env.PIR_PIN_GND,
   +process.env.PIR_PIN_DATA
 );
-/* const pc = new Pc(
-  process.env.PC_MAC_ADDRESS
-); */
-const temp = new Temp(
-  +process.env.TEMP_PIN_POWER,
-  +process.env.TEMP_PIN_DATA,
-  +process.env.TEMP_CORRECTION,
+const tempWunder = new TempWunder(
   +process.env.POSITION_LAT,
   +process.env.POSITION_LON,
   process.env.TEMP_API_KEY
+);
+const tempDht22 = new TempDHT22(
+  +process.env.TEMP_PIN_POWER,
+  +process.env.TEMP_PIN_DATA
 );
 const clock = new Clock(
   process.env.CLOCK_IP_ADDRESS,
@@ -68,11 +83,11 @@ const notify = new Notify(
 let tempAlertLast = 0;
 let tempAlerts = 0;
 
-temp.on('change', (state) => {
+tempDht22.on('change', (state) => {
   const { inRange } = bt.getState();
   if (inRange) return;
 
-  const actualTemp = state.inside.temp;
+  const actualTemp = state.temp;
   const diff = Math.abs(actualTemp - tempAlertLast);
 
   if (actualTemp >= process.env.TEMP_ALERT
@@ -136,22 +151,22 @@ const actualizeClockAppLight = () => {
 };
 
 const actualizeClockAppWeather = () => {
-  const tempState = temp.getState();
+  const tempWunderState = tempWunder.getState();
 
   const data = [{
-    text: tempState.outside.temp ? `${tempState.outside.temp} °C` : '?',
-    icon: icons[tempState.outside.temp_icon] || icons.clear
+    text: tempWunderState.temp ? `${tempWunderState.temp} °C` : '?',
+    icon: icons[tempWunderState.temp_icon] || icons.clear
   }];
 
-  if (tempState.outside.pop >= 20) {
+  if (tempWunderState.pop >= 20) {
     data.push({
-      text: tempState.outside.pop ? `${tempState.outside.pop} %` : '?',
-      icon: icons[tempState.outside.pop_icon] || icons.clear
+      text: tempWunderState.pop ? `${tempWunderState.pop} %` : '?',
+      icon: icons[tempWunderState.pop_icon] || icons.clear
     });
   }
 
   /* data.push({
-    text: tempState.outside.wind ? `${tempState.outside.wind}km/h` : '?',
+    text: tempWunderState.wind ? `${tempWunderState.wind}km/h` : '?',
     icon: icons.wind
   }); */
 
@@ -162,6 +177,46 @@ setInterval(actualizeClockAppLight, 60 * 1000);
 setInterval(actualizeClockAppWeather, 60 * 1000);
 actualizeClockAppLight();
 actualizeClockAppWeather();
+
+
+/* ************************************************************************************************
+ LCD
+ ************************************************************************************************ */
+
+wiringPi.digitalWrite(+process.env.LCD_PIN_BACKLIGHT, wiringPi.HIGH);
+
+pir.on('move', () => wiringPi.digitalWrite(+process.env.LCD_PIN_BACKLIGHT, wiringPi.HIGH));
+pir.on('moveend', () => wiringPi.digitalWrite(+process.env.LCD_PIN_BACKLIGHT, wiringPi.LOW));
+
+lcd.on('ready', () => {
+  const redraw = () => {
+    osUtils.cpuUsage((v) => {
+      const cpu = Math.round(v * 100);
+      const mem = Math.round(osUtils.totalmem() - osUtils.freemem());
+      const upt = osUtils.sysUptime();
+
+      const d = Math.floor(upt / 86400);
+      const h = Math.floor((upt % 86400) / 3600);
+      const m = Math.floor((upt % 3600) / 60);
+
+      const tempState = tempDht22.getState();
+      const tempValue = Number(tempState.temp).toFixed(1);
+      const humidityValue = Number(tempState.humidity).toFixed(1);
+
+      lcd.clear(() => {
+        lcd.setCursor(0, 0);
+        lcd.print(vsprintf('%4sC %3d%% %3dMB', [tempValue, cpu, mem]), () => {
+          lcd.setCursor(0, 1);
+          lcd.print(vsprintf('%4s%% %3dd %02d:%02d', [humidityValue, d, h, m]), () => {
+            setTimeout(redraw, 3 * 1000);
+          });
+        });
+      });
+    });
+  };
+
+  redraw();
+});
 
 
 /* ************************************************************************************************
@@ -209,29 +264,24 @@ app.get('/workflow/radio-stop', (req, res) => {
   res.send('ok');
 });
 
-/* app.get('/workflow/wake-pc', (req, res) => {
-  pc.wake();
-  res.send('ok');
-}); */
-
 app.get('/workflow/info', (req, res) => {
   const pirState = pir.getState();
-  const tempState = temp.getState();
+  const tempWunderState = tempWunder.getState();
+  const tempDht22State = tempDht22.getState();
   const lightState = swtch.getState();
   const btState = bt.getState();
 
-  const dateFormat = 'd. m. yyyy H:MM:ss';
+  const dateFormat = 'd. m. H:MM:ss';
   const uptime = new Date(execSync('uptime -s').toString());
   const uptimeDate = dateformat(uptime, dateFormat);
   const lastPirDate = pirState.last ? dateformat(pirState.last, dateFormat) : '---';
 
   res.send(`
-    ${emoticons.thermometer} ${tempState.inside.temp ? `${tempState.inside.temp} °C` : '?'} &nbsp;
-    ${tempState.outside.temp ? `${emoticons[tempState.outside.temp_icon]} ${tempState.outside.temp} °C` : `${emoticons.weather} ?`} &nbsp;
-    ${tempState.outside.pop ? `${emoticons[tempState.outside.pop_icon]} ${tempState.outside.pop} %` : `${emoticons.rain} ?`} &nbsp;
-    ${lightState.A ? emoticons.light_on : emoticons.light_off}<br>
-    🏃 ${lastPirDate} &nbsp; 🔔 ${firstMove ? 'y' : 'n'} &nbsp; 📍 ${btState.inRange ? 'in' : 'out'}<br>
-    🕰 ${uptimeDate}
+    ${tempDht22State.temp ? `${emoticons.thermometer} ${tempDht22State.temp} °C &nbsp;${tempDht22State.humidity} %` : `${emoticons.thermometer} ? &nbsp;?`} &nbsp;
+    ${tempWunderState.temp ? `${emoticons[tempWunderState.temp_icon]} ${tempWunderState.temp} °C &nbsp;${tempWunderState.humidity} %` : `${emoticons.weather} ? &nbsp;?`} &nbsp;
+    ${tempWunderState.pop ? `${emoticons[tempWunderState.pop_icon]} ${tempWunderState.pop} %` : `${emoticons.rain} ?`}<br>
+    ${lightState.A ? emoticons.light_on : emoticons.light_off} &nbsp; 🔔 ${firstMove ? 'y' : 'n'} &nbsp; 📍 ${btState.inRange ? 'in' : 'out'}<br>
+    🏃 ${lastPirDate} &nbsp; 🕰 ${uptimeDate}
   `);
 });
 
