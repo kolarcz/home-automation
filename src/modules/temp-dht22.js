@@ -13,6 +13,8 @@ module.exports = class TempDHT22 extends EventEmitter {
     };
 
     if (pinPower) {
+      wiringPi.setup('gpio');
+      wiringPi.pinMode(pinPower, wiringPi.OUTPUT);
       wiringPi.digitalWrite(pinPower, wiringPi.HIGH);
     }
 

@@ -183,6 +183,8 @@ actualizeClockAppWeather();
  LCD
  ************************************************************************************************ */
 
+wiringPi.setup('gpio');
+wiringPi.pinMode(+process.env.LCD_PIN_BACKLIGHT, wiringPi.OUTPUT);
 wiringPi.digitalWrite(+process.env.LCD_PIN_BACKLIGHT, wiringPi.HIGH);
 
 pir.on('move', () => wiringPi.digitalWrite(+process.env.LCD_PIN_BACKLIGHT, wiringPi.HIGH));
