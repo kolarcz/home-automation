@@ -156,11 +156,6 @@ const actualizeClockAppWeather = () => {
     });
   }
 
-  /* data.push({
-    text: tempWunderState.wind ? `${tempWunderState.wind}km/h` : '?',
-    icon: icons.wind
-  }); */
-
   clock.pushState('weather', data);
 };
 
