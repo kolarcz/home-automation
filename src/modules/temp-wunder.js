@@ -28,7 +28,7 @@ module.exports = class TempWunder extends EventEmitter {
       request.get({ url: apiUrlConditions, json: true }, (err1, response1, bodyConds) => {
         request.get({ url: apiUrlHourly, json: true }, (err2, response2, bodyHourly) => {
           try {
-            const snow = parseInt(bodyHourly.hourly_forecast[0].qpf.english, 10);
+            const snow = parseInt(bodyHourly.hourly_forecast[0].snow.english, 10);
             const rain = parseInt(bodyHourly.hourly_forecast[0].qpf.english, 10);
             const icon = bodyHourly.hourly_forecast[0].icon;
 

@@ -1,9 +1,7 @@
 const express = require('express');
 const expressBasicAuth = require('express-basic-auth');
 const dateformat = require('dateformat');
-const execSync = require('child_process').execSync;
 const vsprintf = require('sprintf-js').vsprintf;
-const osUtils = require('os-utils');
 const wiringPi = require('wiring-pi');
 
 require('dotenv').config({
@@ -14,6 +12,7 @@ const { icons, emoticons } = require('./icons');
 
 const Lcd = require('lcd');
 
+const System = require('./modules/system');
 const Switch = require('./modules/switch');
 const Pir = require('./modules/pir');
 const TempWunder = require('./modules/temp-wunder');
@@ -41,6 +40,7 @@ const lcd = new Lcd({
   rows: 2
 });
 
+const system = new System();
 const swtch = new Switch(
   +process.env.SWITCH_PIN_POWER,
   +process.env.SWITCH_PIN_DATA,
@@ -81,26 +81,20 @@ const notify = new Notify(
  ************************************************************************************************ */
 
 let tempAlertLast = 0;
-let tempAlerts = 0;
 
-tempDht22.on('change', (state) => {
+tempDht22.on('change', ({ temp }) => {
   const { inRange } = bt.getState();
-  if (inRange) return;
-
-  const actualTemp = state.temp;
-  const diff = Math.abs(actualTemp - tempAlertLast);
-
-  if (actualTemp >= process.env.TEMP_ALERT
-    && diff >= 1 && tempAlerts < process.env.TEMP_ALERT_CNT
-  ) {
-    notify.send(`teplota ${actualTemp} °C`);
-    tempAlertLast = actualTemp;
-    tempAlerts++;
+  if (inRange) {
+    tempAlertLast = 0;
+    return;
   }
 
-  if (actualTemp <= process.env.TEMP_ALERT_CLEAN) {
-    tempAlertLast = 0;
-    tempAlerts = 0;
+  const diff = Math.abs(temp - tempAlertLast);
+  const isBigTemp = (temp >= process.env.TEMP_ALERT);
+
+  if ((isBigTemp || tempAlertLast) && diff >= 1) {
+    notify.send(`teplota ${temp} °C`);
+    tempAlertLast = isBigTemp ? temp : 0;
   }
 });
 
@@ -110,9 +104,6 @@ bt.on('change', (state) => {
   if (!state.inRange) {
     firstMove = false;
     swtch.send('A', false);
-
-    tempAlertLast = 0;
-    tempAlerts = 0;
   }
 });
 
@@ -192,26 +183,17 @@ pir.on('moveend', () => wiringPi.digitalWrite(+process.env.LCD_PIN_BACKLIGHT, wi
 
 lcd.on('ready', () => {
   const redraw = () => {
-    osUtils.cpuUsage((v) => {
-      const cpu = Math.round(v * 100);
-      const mem = Math.round(osUtils.totalmem() - osUtils.freemem());
-      const upt = osUtils.sysUptime();
+    const systemState = system.getState();
+    const tempState = tempDht22.getState();
+    const tempValue = Number(tempState.temp).toFixed(1);
+    const humidityValue = Number(tempState.humidity).toFixed(1);
 
-      const d = Math.floor(upt / 86400);
-      const h = Math.floor((upt % 86400) / 3600);
-      const m = Math.floor((upt % 3600) / 60);
-
-      const tempState = tempDht22.getState();
-      const tempValue = Number(tempState.temp).toFixed(1);
-      const humidityValue = Number(tempState.humidity).toFixed(1);
-
-      lcd.clear(() => {
-        lcd.setCursor(0, 0);
-        lcd.print(vsprintf('%4sC %3d%% %3dMB', [tempValue, cpu, mem]), () => {
-          lcd.setCursor(0, 1);
-          lcd.print(vsprintf('%4s%% %3dd %02d:%02d', [humidityValue, d, h, m]), () => {
-            setTimeout(redraw, 3 * 1000);
-          });
+    lcd.clear(() => {
+      lcd.setCursor(0, 0);
+      lcd.print(vsprintf('%4sC %3d%% %3dMB', [tempValue, systemState.cpu, systemState.memory]), () => {
+        lcd.setCursor(0, 1);
+        lcd.print(vsprintf('%4s%% %3dd %02d:%02d', [humidityValue, systemState.uptimeDays, systemState.uptimeHours, systemState.uptimeMinutes]), () => {
+          setTimeout(redraw, 3 * 1000);
         });
       });
     });
@@ -272,10 +254,10 @@ app.get('/workflow/info', (req, res) => {
   const tempDht22State = tempDht22.getState();
   const lightState = swtch.getState();
   const btState = bt.getState();
+  const systemState = system.getState();
 
   const dateFormat = 'd. m. H:MM:ss';
-  const uptime = new Date(execSync('uptime -s').toString());
-  const uptimeDate = dateformat(uptime, dateFormat);
+  const uptimeDate = dateformat(systemState.uptimeStart, dateFormat);
   const lastPirDate = pirState.last ? dateformat(pirState.last, dateFormat) : '---';
 
   res.send(`
