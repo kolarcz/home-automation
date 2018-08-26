@@ -76,6 +76,44 @@ const notify = new Notify(
   process.env.NOTIFY_API_KEY
 );
 
+
+/* ************************************************************************************************
+ CLOCK ACTUALIZE
+ ************************************************************************************************ */
+
+const actualizeClockAppLight = () => {
+  const lightState = swtch.getState().A;
+
+  clock.pushState('light', [{
+    icon: lightState ? icons.light_on : icons.light_off,
+    text: lightState ? 'off' : 'on'
+  }]);
+};
+
+const actualizeClockAppWeather = () => {
+  const tempWunderState = tempWunder.getState();
+
+  const data = [{
+    text: tempWunderState.temp ? `${tempWunderState.temp} °C` : '?',
+    icon: icons[tempWunderState.temp_icon] || icons.clear
+  }];
+
+  if (tempWunderState.pop >= 20) {
+    data.push({
+      text: tempWunderState.pop ? `${tempWunderState.pop} %` : '?',
+      icon: icons[tempWunderState.pop_icon] || icons.clear
+    });
+  }
+
+  clock.pushState('weather', data);
+};
+
+setInterval(actualizeClockAppLight, 60 * 1000);
+setInterval(actualizeClockAppWeather, 60 * 1000);
+actualizeClockAppLight();
+actualizeClockAppWeather();
+
+
 /* ************************************************************************************************
  CUSTOM EVENTS
  ************************************************************************************************ */
@@ -127,42 +165,9 @@ sun.on('sunset', () => {
   if (inRange) swtch.send('A', true);
 });
 
-
-/* ************************************************************************************************
- CLOCK ACTUALIZE
- ************************************************************************************************ */
-
-const actualizeClockAppLight = () => {
-  const lightState = swtch.getState().A;
-
-  clock.pushState('light', [{
-    icon: lightState ? icons.light_on : icons.light_off,
-    text: lightState ? 'off' : 'on'
-  }]);
-};
-
-const actualizeClockAppWeather = () => {
-  const tempWunderState = tempWunder.getState();
-
-  const data = [{
-    text: tempWunderState.temp ? `${tempWunderState.temp} °C` : '?',
-    icon: icons[tempWunderState.temp_icon] || icons.clear
-  }];
-
-  if (tempWunderState.pop >= 20) {
-    data.push({
-      text: tempWunderState.pop ? `${tempWunderState.pop} %` : '?',
-      icon: icons[tempWunderState.pop_icon] || icons.clear
-    });
-  }
-
-  clock.pushState('weather', data);
-};
-
-setInterval(actualizeClockAppLight, 60 * 1000);
-setInterval(actualizeClockAppWeather, 60 * 1000);
-actualizeClockAppLight();
-actualizeClockAppWeather();
+swtch.on('change::A', () =>
+  actualizeClockAppLight()
+);
 
 
 /* ************************************************************************************************
@@ -217,19 +222,16 @@ app.use((req, res, next) => {
 
 app.get('/lametric/light', (req, res) => {
   swtch.send('A', !swtch.getState().A);
-  actualizeClockAppLight();
   res.send('ok');
 });
 
 app.get('/workflow/light-on', (req, res) => {
   swtch.send('A', true);
-  actualizeClockAppLight();
   res.send('ok');
 });
 
 app.get('/workflow/light-off', (req, res) => {
   swtch.send('A', false);
-  actualizeClockAppLight();
   res.send('ok');
 });
 
@@ -256,11 +258,11 @@ app.get('/workflow/info', (req, res) => {
   const lastPirDate = pirState.last ? dateformat(pirState.last, dateFormat) : '---';
 
   res.send(`
-    ${tempDht22State.temp ? `${emoticons.thermometer} ${tempDht22State.temp} °C &nbsp;${tempDht22State.humidity} %` : `${emoticons.thermometer} ? &nbsp;?`} &nbsp;
-    ${tempWunderState.temp ? `${emoticons[tempWunderState.temp_icon]} ${tempWunderState.temp} °C &nbsp;${tempWunderState.humidity} %` : `${emoticons.weather} ? &nbsp;?`} &nbsp;
-    ${tempWunderState.pop ? `${emoticons[tempWunderState.pop_icon]} ${tempWunderState.pop} %` : `${emoticons.rain} ?`}<br>
-    ${lightState.A ? emoticons.light_on : emoticons.light_off} &nbsp; 🔔 ${firstMove ? 'y' : 'n'} &nbsp; 📍 ${btState.inRange ? 'in' : 'out'}<br>
-    🏃 ${lastPirDate} &nbsp; 🕰 ${uptimeDate}
+    ${tempDht22State.temp ? `${emoticons.thermometer} ${tempDht22State.temp}°C &nbsp;${tempDht22State.humidity}%` : `${emoticons.thermometer} ? &nbsp;?`} &nbsp;
+    ${tempWunderState.temp ? `${emoticons[tempWunderState.temp_icon]} ${tempWunderState.temp}°C &nbsp;${tempWunderState.humidity}%` : `${emoticons.weather} ? &nbsp;?`} &nbsp;
+    ${tempWunderState.pop ? `${emoticons[tempWunderState.pop_icon]} ${tempWunderState.pop}%` : `${emoticons.rain} ?`}<br>
+    🏃 ${lastPirDate} &nbsp; 🕰 ${uptimeDate}<br>
+    ${lightState.A ? emoticons.light_on : emoticons.light_off} &nbsp; 🔔 ${firstMove ? 'y' : 'n'} &nbsp; 📍 ${btState.inRange ? 'in' : 'out'}
   `);
 });
 

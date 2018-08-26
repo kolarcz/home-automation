@@ -48,6 +48,8 @@ module.exports = class Switch extends EventEmitter {
     piswitch.send(message, 'tristate');
 
     this.state[letter] = turnOn;
+
+    this.emit(`change::${letter}`);
     this.emit('change');
   }
 
