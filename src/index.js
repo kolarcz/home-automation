@@ -22,6 +22,8 @@ const Bt = require('./modules/bt');
 const Sun = require('./modules/sun');
 const Notify = require('./modules/notify');
 
+let lightAutomation = false;
+
 
 /* ************************************************************************************************
  INSTANCES
@@ -141,7 +143,10 @@ let firstMove = false;
 bt.on('change', (state) => {
   if (!state.inRange) {
     firstMove = false;
-    swtch.send('A', false);
+
+    if (lightAutomation) {
+      swtch.send('A', false);
+    }
   }
 });
 
@@ -153,7 +158,9 @@ pir.on('move', () => {
     firstMove = true;
 
     if (inRange) {
-      if (isNight) swtch.send('A', true);
+      if (isNight && lightAutomation) {
+        swtch.send('A', true);
+      }
     } else {
       notify.send('alarm');
     }
@@ -162,7 +169,9 @@ pir.on('move', () => {
 
 sun.on('sunset', () => {
   const { inRange } = bt.getState();
-  if (inRange) swtch.send('A', true);
+  if (inRange && lightAutomation) {
+    swtch.send('A', true);
+  }
 });
 
 swtch.on('change::A', () =>
@@ -235,6 +244,16 @@ app.get('/workflow/light-off', (req, res) => {
   res.send('ok');
 });
 
+app.get('/workflow/light-auto-on', (req, res) => {
+  lightAutomation = true;
+  res.send('ok');
+});
+
+app.get('/workflow/light-auto-off', (req, res) => {
+  lightAutomation = false;
+  res.send('ok');
+});
+
 app.get('/workflow/radio-play', (req, res) => {
   clock.sendAction('radio.play');
   res.send('ok');
@@ -262,7 +281,7 @@ app.get('/workflow/info', (req, res) => {
     ${tempWunderState.temp ? `${emoticons[tempWunderState.temp_icon]} ${tempWunderState.temp}°C &nbsp;${tempWunderState.humidity}%` : `${emoticons.weather} ? &nbsp;?`} &nbsp;
     ${tempWunderState.pop ? `${emoticons[tempWunderState.pop_icon]} ${tempWunderState.pop}%` : `${emoticons.rain} ?`}<br>
     🏃 ${lastPirDate} &nbsp; 🕰 ${uptimeDate}<br>
-    ${lightState.A ? emoticons.light_on : emoticons.light_off} &nbsp; 🔔 ${firstMove ? 'y' : 'n'} &nbsp; 📍 ${btState.inRange ? 'in' : 'out'}
+    ${lightState.A ? emoticons.light_on : emoticons.light_off} &nbsp; 🔔 ${firstMove ? 'y' : 'n'} &nbsp; 📍 ${btState.inRange ? 'in' : 'out'} &nbsp; ⚡️ ${lightAutomation ? 'y' : 'n'}
   `);
 });
 
