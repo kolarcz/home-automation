@@ -174,6 +174,12 @@ sun.on('sunset', () => {
   }
 });
 
+sun.on('sunrise', () => {
+  if (lightAutomation) {
+    swtch.send('A', false);
+  }
+});
+
 swtch.on('change::A', () =>
   actualizeClockAppLight()
 );
