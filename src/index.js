@@ -22,7 +22,7 @@ const Bt = require('./modules/bt');
 const Sun = require('./modules/sun');
 const Notify = require('./modules/notify');
 
-let lightAutomation = false;
+let automation = false;
 
 
 /* ************************************************************************************************
@@ -144,9 +144,12 @@ bt.on('change', (state) => {
   if (!state.inRange) {
     firstMove = false;
 
-    if (lightAutomation) {
+    if (automation) {
       swtch.send('A', false);
+      swtch.send('B', true);
     }
+  } else if (automation) {
+    swtch.send('B', false);
   }
 });
 
@@ -158,7 +161,7 @@ pir.on('move', () => {
     firstMove = true;
 
     if (inRange) {
-      if (isNight && lightAutomation) {
+      if (isNight && automation) {
         swtch.send('A', true);
       }
     } else {
@@ -169,13 +172,13 @@ pir.on('move', () => {
 
 sun.on('sunset', () => {
   const { inRange } = bt.getState();
-  if (inRange && lightAutomation) {
+  if (inRange && automation) {
     swtch.send('A', true);
   }
 });
 
 sun.on('sunrise', () => {
-  if (lightAutomation) {
+  if (automation) {
     swtch.send('A', false);
   }
 });
@@ -240,41 +243,51 @@ app.get('/lametric/light', (req, res) => {
   res.send('ok');
 });
 
-app.get('/workflow/light-on', (req, res) => {
+app.get('/shortcuts/light-on', (req, res) => {
   swtch.send('A', true);
   res.send('ok');
 });
 
-app.get('/workflow/light-off', (req, res) => {
+app.get('/shortcuts/light-off', (req, res) => {
   swtch.send('A', false);
   res.send('ok');
 });
 
-app.get('/workflow/light-auto-on', (req, res) => {
-  lightAutomation = true;
+app.get('/shortcuts/cam-on', (req, res) => {
+  swtch.send('B', true);
   res.send('ok');
 });
 
-app.get('/workflow/light-auto-off', (req, res) => {
-  lightAutomation = false;
+app.get('/shortcuts/cam-off', (req, res) => {
+  swtch.send('B', false);
   res.send('ok');
 });
 
-app.get('/workflow/radio-play', (req, res) => {
+app.get('/shortcuts/automation-on', (req, res) => {
+  automation = true;
+  res.send('ok');
+});
+
+app.get('/shortcuts/automation-off', (req, res) => {
+  automation = false;
+  res.send('ok');
+});
+
+app.get('/shortcuts/radio-play', (req, res) => {
   clock.sendAction('radio.play');
   res.send('ok');
 });
 
-app.get('/workflow/radio-stop', (req, res) => {
+app.get('/shortcuts/radio-stop', (req, res) => {
   clock.sendAction('radio.stop');
   res.send('ok');
 });
 
-app.get('/workflow/info', (req, res) => {
+app.get('/shortcuts/info', (req, res) => {
   const pirState = pir.getState();
   const tempWunderState = tempWunder.getState();
   const tempDht22State = tempDht22.getState();
-  const lightState = swtch.getState();
+  const swtchState = swtch.getState();
   const btState = bt.getState();
   const systemState = system.getState();
 
@@ -283,11 +296,15 @@ app.get('/workflow/info', (req, res) => {
   const lastPirDate = pirState.last ? dateformat(pirState.last, dateFormat) : '---';
 
   res.send(`
-    ${tempDht22State.temp ? `${emoticons.thermometer} ${tempDht22State.temp}°C &nbsp;${tempDht22State.humidity}%` : `${emoticons.thermometer} ? &nbsp;?`} &nbsp;
-    ${tempWunderState.temp ? `${emoticons[tempWunderState.temp_icon]} ${tempWunderState.temp}°C &nbsp;${tempWunderState.humidity}%` : `${emoticons.weather} ? &nbsp;?`} &nbsp;
+    ${tempDht22State.temp ? `${emoticons.thermometer} ${tempDht22State.temp}°C ${tempDht22State.humidity}%` : `${emoticons.thermometer} ? ?`} &nbsp;
+    ${tempWunderState.temp ? `${emoticons[tempWunderState.temp_icon]} ${tempWunderState.temp}°C ${tempWunderState.humidity}%` : `${emoticons.weather} ? ?`} &nbsp;
     ${tempWunderState.pop ? `${emoticons[tempWunderState.pop_icon]} ${tempWunderState.pop}%` : `${emoticons.rain} ?`}<br>
     🏃 ${lastPirDate} &nbsp; 🕰 ${uptimeDate}<br>
-    ${lightState.A ? emoticons.light_on : emoticons.light_off} &nbsp; 🔔 ${firstMove ? 'y' : 'n'} &nbsp; 📍 ${btState.inRange ? 'in' : 'out'} &nbsp; ⚡️ ${lightAutomation ? 'y' : 'n'}
+    ${swtchState.A ? emoticons.light_on : emoticons.light_off} &nbsp;
+    📹 ${swtchState.B ? 'on' : 'off'} &nbsp;
+    🔔 ${firstMove ? 'y' : 'n'} &nbsp;
+    📍 ${btState.inRange ? 'in' : 'out'} &nbsp;
+    🤖 ${automation ? 'y' : 'n'}
   `);
 });
 
