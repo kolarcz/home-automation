@@ -84,11 +84,11 @@ const notify = new Notify(
  ************************************************************************************************ */
 
 const actualizeClockAppLight = () => {
-  const lightState = swtch.getState().A;
+  const isLightOn = swtch.getState().A;
 
   clock.pushState('light', [{
-    icon: lightState ? icons.light_on : icons.light_off,
-    text: lightState ? 'off' : 'on'
+    icon: isLightOn ? icons.light_on : icons.light_off,
+    text: isLightOn ? 'off' : 'on'
   }]);
 };
 
@@ -196,8 +196,12 @@ wiringPi.setup('gpio');
 wiringPi.pinMode(+process.env.LCD_PIN_BACKLIGHT, wiringPi.OUTPUT);
 wiringPi.digitalWrite(+process.env.LCD_PIN_BACKLIGHT, wiringPi.HIGH);
 
-pir.on('move', () => wiringPi.digitalWrite(+process.env.LCD_PIN_BACKLIGHT, wiringPi.HIGH));
 pir.on('moveend', () => wiringPi.digitalWrite(+process.env.LCD_PIN_BACKLIGHT, wiringPi.LOW));
+pir.on('move', () => {
+  const { isNight } = sun.getState();
+  const isLightOn = swtch.getState().A;
+  if (!isNight || isLightOn) wiringPi.digitalWrite(+process.env.LCD_PIN_BACKLIGHT, wiringPi.HIGH);
+});
 
 lcd.on('ready', () => {
   const redraw = () => {
