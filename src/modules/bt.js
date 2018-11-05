@@ -10,6 +10,8 @@ module.exports = class Bt extends EventEmitter {
       inRange: true
     };
 
+    btwatch.set(30);
+
     btwatch.watch(watchedMacAddress);
 
     btwatch.on('change', (inRange) => {

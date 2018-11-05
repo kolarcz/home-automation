@@ -3,6 +3,7 @@ const expressBasicAuth = require('express-basic-auth');
 const dateformat = require('dateformat');
 const vsprintf = require('sprintf-js').vsprintf;
 const wiringPi = require('wiring-pi');
+const Conf = require('conf');
 
 require('dotenv').config({
   path: `${__dirname}/../.env`
@@ -14,6 +15,7 @@ const Lcd = require('lcd');
 
 const System = require('./modules/system');
 const Switch = require('./modules/switch');
+const Relay = require('./modules/relay');
 const Pir = require('./modules/pir');
 const TempWunder = require('./modules/temp-wunder');
 const TempDHT22 = require('./modules/temp-dht22');
@@ -22,7 +24,21 @@ const Bt = require('./modules/bt');
 const Sun = require('./modules/sun');
 const Notify = require('./modules/notify');
 
+
+/* ************************************************************************************************
+ GLOBALS
+ ************************************************************************************************ */
+
+const saveState = (process.env.SAVE_STATES === 'true');
+const storage = saveState && new Conf({ configName: __filename });
+
 let automation = false;
+let firstMove = false;
+
+if (storage) {
+  automation = storage.get('automation', automation);
+  firstMove = storage.get('firstMove', firstMove);
+}
 
 
 /* ************************************************************************************************
@@ -46,12 +62,17 @@ const system = new System();
 const swtch = new Switch(
   +process.env.SWITCH_PIN_POWER,
   +process.env.SWITCH_PIN_DATA,
-  process.env.SWITCH_CODE
+  process.env.SWITCH_CODE,
+  saveState
+);
+const relay = new Relay(
+  +process.env.RELAY_PIN_DATA
 );
 const pir = new Pir(
   +process.env.PIR_PIN_POWER,
   +process.env.PIR_PIN_GND,
-  +process.env.PIR_PIN_DATA
+  +process.env.PIR_PIN_DATA,
+  saveState
 );
 const tempWunder = new TempWunder(
   +process.env.POSITION_LAT,
@@ -138,11 +159,10 @@ tempDht22.on('change', ({ temp }) => {
   }
 });
 
-let firstMove = false;
-
 bt.on('change', (state) => {
   if (!state.inRange) {
     firstMove = false;
+    if (storage) storage.set('firstMove', firstMove);
 
     if (automation) {
       swtch.send('A', false);
@@ -159,6 +179,7 @@ pir.on('move', () => {
 
   if (!firstMove) {
     firstMove = true;
+    if (storage) storage.set('firstMove', firstMove);
 
     if (inRange) {
       if (isNight && automation) {
@@ -192,7 +213,6 @@ swtch.on('change::A', () =>
  LCD
  ************************************************************************************************ */
 
-wiringPi.setup('gpio');
 wiringPi.pinMode(+process.env.LCD_PIN_BACKLIGHT, wiringPi.OUTPUT);
 wiringPi.digitalWrite(+process.env.LCD_PIN_BACKLIGHT, wiringPi.HIGH);
 
@@ -269,11 +289,13 @@ app.get('/shortcuts/cam-off', (req, res) => {
 
 app.get('/shortcuts/automation-on', (req, res) => {
   automation = true;
+  if (storage) storage.set('automation', automation);
   res.send('ok');
 });
 
 app.get('/shortcuts/automation-off', (req, res) => {
   automation = false;
+  if (storage) storage.set('automation', automation);
   res.send('ok');
 });
 
@@ -284,6 +306,11 @@ app.get('/shortcuts/radio-play', (req, res) => {
 
 app.get('/shortcuts/radio-stop', (req, res) => {
   clock.sendAction('radio.stop');
+  res.send('ok');
+});
+
+app.get('/shortcuts/open', (req, res) => {
+  relay.open();
   res.send('ok');
 });
 

@@ -1,27 +1,20 @@
 const EventEmitter = require('events');
 const piswitch = require('piswitch');
 const wpi = require('wiring-pi');
+const Conf = require('conf');
 
 module.exports = class Switch extends EventEmitter {
 
-  constructor(pinPower, pinData, code) {
+  constructor(pinPower, pinData, code, saveState) {
     super();
-
-    this.state = {
-      A: false,
-      B: false,
-      C: false,
-      D: false,
-      E: false
-    };
-
-    const mode = 'gpio';
 
     this.code = code;
 
     if (!this.code.match(/^[01]{5}$/)) {
       throw new Error('Invalid code');
     }
+
+    const mode = 'gpio';
 
     wpi.setup(mode);
 
@@ -34,6 +27,19 @@ module.exports = class Switch extends EventEmitter {
       mode,
       pin: pinData
     });
+
+    this.state = {
+      A: false,
+      B: false,
+      C: false,
+      D: false,
+      E: false
+    };
+
+    if (saveState) {
+      this.storage = new Conf({ configName: __filename });
+      this.state = this.storage.get('state', this.state);
+    }
   }
 
   send(letter, turnOn) {
@@ -48,6 +54,9 @@ module.exports = class Switch extends EventEmitter {
     piswitch.send(message, 'tristate');
 
     this.state[letter] = turnOn;
+    if (this.storage) {
+      this.storage.set('state', this.state);
+    }
 
     this.emit(`change::${letter}`);
     this.emit('change');

@@ -7,6 +7,8 @@ module.exports = class TempDHT22 extends EventEmitter {
   constructor(pinPower, pinData) {
     super();
 
+    this.waitForNextTemp = false;
+
     this.state = {
       temp: null,
       humidity: null
@@ -21,12 +23,25 @@ module.exports = class TempDHT22 extends EventEmitter {
     const dht = new rpiDhtSensor.DHT22(pinData);
 
     const loadData = () => {
-      const readout = dht.read();
+      const { temperature, humidity } = dht.read();
 
-      if (readout.temperature || readout.humidity) {
-        this.state.temp = Math.round((readout.temperature) * 10) / 10;
-        this.state.humidity = Math.round((readout.humidity) * 10) / 10;
-        this.emit('change', this.state);
+      if (temperature || humidity) {
+        if (this.waitForNextTemp) {
+          this.waitForNextTemp = false;
+        } else if (this.state.temp !== null && Math.abs(this.state.temp - temperature) > 5) {
+          this.waitForNextTemp = true;
+        }
+
+        if (!this.waitForNextTemp) {
+          const newTemperature = Math.round(temperature * 10) / 10;
+          const newHumidity = Math.round(humidity * 10) / 10;
+
+          if (this.state.temp !== newTemperature || this.state.humidity !== newHumidity) {
+            this.state.temp = newTemperature;
+            this.state.humidity = newHumidity;
+            this.emit('change', this.state);
+          }
+        }
       }
 
       setTimeout(loadData, 5 * 1000);

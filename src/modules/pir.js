@@ -1,9 +1,10 @@
 const EventEmitter = require('events');
 const wpi = require('wiring-pi');
+const Conf = require('conf');
 
 module.exports = class Pir extends EventEmitter {
 
-  constructor(pinPower, pinGnd, pinData) {
+  constructor(pinPower, pinGnd, pinData, saveState) {
     super();
 
     this.state = {
@@ -11,11 +12,19 @@ module.exports = class Pir extends EventEmitter {
       last: false
     };
 
+    if (saveState) {
+      this.storage = new Conf({ configName: __filename });
+      this.state.last = this.storage.get('state.last', this.state.last);
+    }
+
     const mode = 'gpio';
 
     let moveRefreshInterval;
     const moveRefreshFn = () => {
       this.state.last = new Date();
+      if (this.storage) {
+        this.storage.set('state.last', this.state.last);
+      }
     };
 
     wpi.setup(mode);
