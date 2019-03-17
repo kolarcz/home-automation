@@ -23,6 +23,7 @@ const Clock = require('./modules/clock');
 const Bt = require('./modules/bt');
 const Sun = require('./modules/sun');
 const Notify = require('./modules/notify');
+const Yeelight = require('./modules/yeelight');
 
 
 /* ************************************************************************************************
@@ -98,14 +99,17 @@ const sun = new Sun(
 const notify = new Notify(
   process.env.NOTIFY_API_KEY
 );
+const yeelight = new Yeelight(
+  process.env.YEELIGHT_IP
+);
 
 
 /* ************************************************************************************************
  CLOCK ACTUALIZE
  ************************************************************************************************ */
 
-const actualizeClockAppLight = () => {
-  const isLightOn = swtch.getState().A;
+const actualizeClockAppLight = async () => {
+  const { power: isLightOn } = await yeelight.getState();
 
   clock.pushState('light', [{
     icon: isLightOn ? icons.light_on : icons.light_off,
@@ -159,21 +163,21 @@ tempDht22.on('change', ({ temp }) => {
   }
 });
 
-bt.on('change', (state) => {
+bt.on('change', async (state) => {
   if (!state.inRange) {
     firstMove = false;
     if (storage) storage.set('firstMove', firstMove);
 
     if (automation) {
-      swtch.send('A', false);
       swtch.send('B', true);
+      await yeelight.turnOff();
     }
   } else if (automation) {
     swtch.send('B', false);
   }
 });
 
-pir.on('move', () => {
+pir.on('move', async () => {
   const { inRange } = bt.getState();
   const { isNight } = sun.getState();
 
@@ -183,7 +187,7 @@ pir.on('move', () => {
 
     if (inRange) {
       if (isNight && automation) {
-        swtch.send('A', true);
+        await yeelight.turnOn();
       }
     } else {
       notify.send('alarm');
@@ -191,21 +195,21 @@ pir.on('move', () => {
   }
 });
 
-sun.on('sunset', () => {
+sun.on('sunset', async () => {
   const { inRange } = bt.getState();
   if (inRange && automation) {
-    swtch.send('A', true);
+    await yeelight.turnOn();
   }
 });
 
-sun.on('sunrise', () => {
+sun.on('sunrise', async () => {
   if (automation) {
-    swtch.send('A', false);
+    await yeelight.turnOff();
   }
 });
 
-swtch.on('change::A', () =>
-  actualizeClockAppLight()
+yeelight.on('change',
+  actualizeClockAppLight
 );
 
 
@@ -217,9 +221,9 @@ wiringPi.pinMode(+process.env.LCD_PIN_BACKLIGHT, wiringPi.OUTPUT);
 wiringPi.digitalWrite(+process.env.LCD_PIN_BACKLIGHT, wiringPi.HIGH);
 
 pir.on('moveend', () => wiringPi.digitalWrite(+process.env.LCD_PIN_BACKLIGHT, wiringPi.LOW));
-pir.on('move', () => {
+pir.on('move', async () => {
   const { isNight } = sun.getState();
-  const isLightOn = swtch.getState().A;
+  const { power: isLightOn } = await yeelight.getState();
   if (!isNight || isLightOn) wiringPi.digitalWrite(+process.env.LCD_PIN_BACKLIGHT, wiringPi.HIGH);
 });
 
@@ -262,18 +266,23 @@ app.use((req, res, next) => {
   }
 });
 
-app.get('/lametric/light', (req, res) => {
-  swtch.send('A', !swtch.getState().A);
+app.get('/lametric/light', async (req, res) => {
+  const { power } = await yeelight.getState();
+  await yeelight[power ? 'turnOff' : 'turnOn']();
   res.send('ok');
 });
 
-app.get('/shortcuts/light-on', (req, res) => {
-  swtch.send('A', true);
-  res.send('ok');
+app.get('/shortcuts/light-on', async (req, res) => {
+  try {
+    await yeelight.setColor(req.query.color);
+    res.send('ok');
+  } catch (err) {
+    res.status(400).send(err.toString());
+  }
 });
 
-app.get('/shortcuts/light-off', (req, res) => {
-  swtch.send('A', false);
+app.get('/shortcuts/light-off', async (req, res) => {
+  await yeelight.turnOff();
   res.send('ok');
 });
 
@@ -314,13 +323,14 @@ app.get('/shortcuts/open', (req, res) => {
   res.send('ok');
 });
 
-app.get('/shortcuts/info', (req, res) => {
+app.get('/shortcuts/info', async (req, res) => {
   const pirState = pir.getState();
   const tempWunderState = tempWunder.getState();
   const tempDht22State = tempDht22.getState();
   const swtchState = swtch.getState();
   const btState = bt.getState();
   const systemState = system.getState();
+  const yeelightState = await yeelight.getState();
 
   const dateFormat = 'd. m. H:MM:ss';
   const uptimeDate = dateformat(systemState.uptimeStart, dateFormat);
@@ -331,11 +341,11 @@ app.get('/shortcuts/info', (req, res) => {
     ${tempWunderState.temp ? `${emoticons[tempWunderState.temp_icon]} ${tempWunderState.temp}°C ${tempWunderState.humidity}%` : `${emoticons.weather} ? ?`} &nbsp;
     ${tempWunderState.pop ? `${emoticons[tempWunderState.pop_icon]} ${tempWunderState.pop}%` : `${emoticons.rain} ?`}<br>
     🏃 ${lastPirDate} &nbsp; 🕰 ${uptimeDate}<br>
-    ${swtchState.A ? emoticons.light_on : emoticons.light_off} &nbsp;
+    💡 ${yeelightState.power ? `${yeelightState.color} (${yeelightState.bright})` : 'off'} &nbsp;
     📹 ${swtchState.B ? 'on' : 'off'} &nbsp;
     🔔 ${firstMove ? 'y' : 'n'} &nbsp;
-    📍 ${btState.inRange ? 'in' : 'out'} &nbsp;
-    🤖 ${automation ? 'y' : 'n'}
+    🤖 ${automation ? 'y' : 'n'} &nbsp;
+    📍 ${btState.inRange ? 'in' : 'out'}
   `);
 });
 

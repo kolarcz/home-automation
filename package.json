@@ -13,6 +13,7 @@
   "license": "ISC",
   "dependencies": {
     "btwatch": "^1.1.0",
+    "colorsys": "^1.0.22",
     "conf": "^2.0.0",
     "dateformat": "^2.0.0",
     "dotenv": "^4.0.0",
@@ -28,7 +29,8 @@
     "suncalc": "^1.8.0",
     "w1temp": "^4.0.2",
     "wiring-pi": "^2.2.1",
-    "wol": "^1.0.3"
+    "wol": "^1.0.3",
+    "yeelight-awesome": "^1.0.12"
   },
   "devDependencies": {
     "eslint": "^4.17.0",

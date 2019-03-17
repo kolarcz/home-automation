@@ -56,9 +56,6 @@ const emoticons = {
   weather: '🌤',
   thermometer: '🏠',
 
-  light_on: '💡 on',
-  light_off: '💡 off',
-
   drop: '💧',
   wind: '💨',
 
