@@ -4,6 +4,8 @@ const dateformat = require('dateformat');
 const vsprintf = require('sprintf-js').vsprintf;
 const wiringPi = require('wiring-pi');
 const Conf = require('conf');
+const firebase = require('firebase-admin');
+const { CronJob } = require('cron');
 
 require('dotenv').config({
   path: `${__dirname}/../.env`
@@ -247,6 +249,32 @@ lcd.on('ready', () => {
 
   redraw();
 });
+
+
+/* ************************************************************************************************
+ FIREBASE
+ ************************************************************************************************ */
+
+const firebaseAccountFile = process.env.FIREBASE_ACCOUNT_FILE;
+
+if (firebaseAccountFile) {
+  const firebaseAccount = require(`../${firebaseAccountFile}`); // eslint-disable-line
+
+  firebase.initializeApp({
+    credential: firebase.credential.cert(firebaseAccount)
+  });
+
+  new CronJob('0 */5 * * * *', () => {
+    const { temp, humidity } = tempDht22.getState();
+    const db = firebase.firestore();
+
+    db.collection('weather').add({
+      date: firebase.firestore.FieldValue.serverTimestamp(),
+      temperature: temp,
+      humidity
+    });
+  }, null, true);
+}
 
 
 /* ************************************************************************************************
