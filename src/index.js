@@ -11,7 +11,7 @@ require('dotenv').config({
   path: `${__dirname}/../.env`
 });
 
-const { icons, emoticons } = require('./icons');
+const { icons, emoji } = require('./icons');
 
 const Lcd = require('lcd');
 
@@ -19,7 +19,7 @@ const System = require('./modules/system');
 const Switch = require('./modules/switch');
 const Relay = require('./modules/relay');
 const Pir = require('./modules/pir');
-const TempWunder = require('./modules/temp-wunder');
+const TempDarksky = require('./modules/temp-darksky');
 const TempDHT22 = require('./modules/temp-dht22');
 const Clock = require('./modules/clock');
 const Bt = require('./modules/bt');
@@ -77,7 +77,7 @@ const pir = new Pir(
   +process.env.PIR_PIN_DATA,
   saveState
 );
-const tempWunder = new TempWunder(
+const tempProvider = new TempDarksky(
   +process.env.POSITION_LAT,
   +process.env.POSITION_LON,
   process.env.TEMP_API_KEY
@@ -120,17 +120,17 @@ const actualizeClockAppLight = async () => {
 };
 
 const actualizeClockAppWeather = () => {
-  const tempWunderState = tempWunder.getState();
+  const tempProviderState = tempProvider.getState();
 
   const data = [{
-    text: tempWunderState.temp ? `${tempWunderState.temp} °C` : '?',
-    icon: icons[tempWunderState.temp_icon] || icons.clear
+    text: Number.isFinite(tempProviderState.temp) ? `${Math.round(tempProviderState.temp)} °C` : '?',
+    icon: icons.weather[tempProviderState.tempIcon] || icons.weather['clear-day']
   }];
 
-  if (tempWunderState.pop >= 20) {
+  if (tempProviderState.pop >= 33) {
     data.push({
-      text: tempWunderState.pop ? `${tempWunderState.pop} %` : '?',
-      icon: icons[tempWunderState.pop_icon] || icons.clear
+      text: Number.isFinite(tempProviderState.pop) ? `${tempProviderState.pop} %` : '?',
+      icon: icons.weather[tempProviderState.popIcon] || icons.weather.rain
     });
   }
 
@@ -265,13 +265,16 @@ if (firebaseAccountFile) {
   });
 
   new CronJob('0 */5 * * * *', () => {
-    const { temp, humidity } = tempDht22.getState();
+    const tempDht22State = tempDht22.getState();
+    const tempProviderState = tempProvider.getState();
     const db = firebase.firestore();
 
     db.collection('weather').add({
       date: firebase.firestore.FieldValue.serverTimestamp(),
-      temperature: temp,
-      humidity
+      temperature: tempDht22State.temp,
+      humidity: tempDht22State.humidity,
+      temperatureOutside: tempProviderState.temp,
+      humidityOutside: tempProviderState.humidity
     });
   }, null, true);
 }
@@ -353,7 +356,7 @@ app.get('/shortcuts/open', (req, res) => {
 
 app.get('/shortcuts/info', async (req, res) => {
   const pirState = pir.getState();
-  const tempWunderState = tempWunder.getState();
+  const tempProviderState = tempProvider.getState();
   const tempDht22State = tempDht22.getState();
   const swtchState = swtch.getState();
   const btState = bt.getState();
@@ -364,10 +367,18 @@ app.get('/shortcuts/info', async (req, res) => {
   const uptimeDate = dateformat(systemState.uptimeStart, dateFormat);
   const lastPirDate = pirState.last ? dateformat(pirState.last, dateFormat) : '---';
 
+  const tempProviderValues = {
+    temp: Number.isFinite(tempProviderState.temp) ? `${Math.round(tempProviderState.temp)}°C` : '?',
+    tempIcon: emoji.weather[tempProviderState.tempIcon] || emoji.weather['clear-day'],
+    pop: Number.isFinite(tempProviderState.pop) ? `${tempProviderState.pop}%` : '?',
+    popIcon: emoji.weather[tempProviderState.popIcon] || emoji.weather.rain,
+    humidity: Number.isFinite(tempProviderState.humidity) ? `${tempProviderState.humidity}%` : '?'
+  };
+
   res.send(`
-    ${tempDht22State.temp ? `${emoticons.thermometer} ${tempDht22State.temp}°C ${tempDht22State.humidity}%` : `${emoticons.thermometer} ? ?`} &nbsp;
-    ${tempWunderState.temp ? `${emoticons[tempWunderState.temp_icon]} ${tempWunderState.temp}°C ${tempWunderState.humidity}%` : `${emoticons.weather} ? ?`} &nbsp;
-    ${tempWunderState.pop ? `${emoticons[tempWunderState.pop_icon]} ${tempWunderState.pop}%` : `${emoticons.rain} ?`}<br>
+    ${tempDht22State.temp ? `${emoji.thermometer} ${tempDht22State.temp}°C ${tempDht22State.humidity}%` : `${emoji.thermometer} ? ?`} &nbsp;
+    ${tempProviderValues.tempIcon} ${tempProviderValues.temp} ${tempProviderValues.humidity} &nbsp;
+    ${tempProviderValues.popIcon} ${tempProviderValues.pop}<br>
     🏃 ${lastPirDate} &nbsp; 🕰 ${uptimeDate}<br>
     💡 ${yeelightState.power ? `${yeelightState.color} (${yeelightState.bright})` : 'off'} &nbsp;
     📹 ${swtchState.B ? 'on' : 'off'} &nbsp;
