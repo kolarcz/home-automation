@@ -317,24 +317,13 @@ app.get('/shortcuts/light-off', async (req, res) => {
   res.send('ok');
 });
 
-app.get('/shortcuts/cam-on', (req, res) => {
-  swtch.send('B', true);
+app.get('/shortcuts/cam-toggle', (req, res) => {
+  swtch.send('B', swtch.getState().B);
   res.send('ok');
 });
 
-app.get('/shortcuts/cam-off', (req, res) => {
-  swtch.send('B', false);
-  res.send('ok');
-});
-
-app.get('/shortcuts/automation-on', (req, res) => {
-  automation = true;
-  if (storage) storage.set('automation', automation);
-  res.send('ok');
-});
-
-app.get('/shortcuts/automation-off', (req, res) => {
-  automation = false;
+app.get('/shortcuts/automation-toggle', (req, res) => {
+  automation = !automation;
   if (storage) storage.set('automation', automation);
   res.send('ok');
 });
