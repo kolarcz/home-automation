@@ -111,7 +111,11 @@ const yeelight = new Yeelight(
  ************************************************************************************************ */
 
 const actualizeLametricAppLight = async () => {
-  const { power: isLightOn } = await yeelight.getState();
+  let isLightOn = await yeelight.getState(false);
+
+  if (isLightOn === undefined) {
+    isLightOn = await yeelight.getState().power;
+  }
 
   lametric.updateWidget('light', [{
     icon: isLightOn ? icons.light_on : icons.light_off,
@@ -225,7 +229,7 @@ wiringPi.digitalWrite(+process.env.LCD_PIN_BACKLIGHT, wiringPi.HIGH);
 pir.on('moveend', () => wiringPi.digitalWrite(+process.env.LCD_PIN_BACKLIGHT, wiringPi.LOW));
 pir.on('move', async () => {
   const { isNight } = sun.getState();
-  const { power: isLightOn } = await yeelight.getState();
+  const { power: isLightOn } = await yeelight.getState(false);
   if (!isNight || isLightOn) wiringPi.digitalWrite(+process.env.LCD_PIN_BACKLIGHT, wiringPi.HIGH);
 });
 
@@ -297,7 +301,7 @@ app.use((req, res, next) => {
   }
 });
 
-app.get('/lametric/light', async (req, res) => {
+app.get('/lametric/light-toggle', async (req, res) => {
   const { power } = await yeelight.getState();
   await yeelight[power ? 'turnOff' : 'turnOn']();
   res.send('ok');
@@ -305,7 +309,13 @@ app.get('/lametric/light', async (req, res) => {
 
 app.get('/shortcuts/light-on', async (req, res) => {
   try {
-    await yeelight.setColor(req.query.color);
+    if (req.query.color) {
+      await yeelight.setColor(req.query.color, req.query.brightness);
+    } else if (req.query.temperature) {
+      await yeelight.setTemperature(req.query.temperature, req.query.brightness);
+    } else {
+      throw new Error('Param color or temperature required');
+    }
     res.send('ok');
   } catch (err) {
     res.status(400).send(err.toString());
@@ -350,7 +360,7 @@ app.get('/shortcuts/info', async (req, res) => {
   const swtchState = swtch.getState();
   const btState = bt.getState();
   const systemState = system.getState();
-  const yeelightState = await yeelight.getState();
+  const yeelightState = await yeelight.getState(false);
 
   const dateFormat = 'd. m. H:MM:ss';
   const uptimeDate = dateformat(systemState.uptimeStart, dateFormat);
@@ -369,11 +379,11 @@ app.get('/shortcuts/info', async (req, res) => {
     ${tempProviderValues.tempIcon} ${tempProviderValues.temp} ${tempProviderValues.humidity} &nbsp;
     ${tempProviderValues.popIcon} ${tempProviderValues.pop}<br>
     🏃 ${lastPirDate} &nbsp; 🕰 ${uptimeDate}<br>
-    💡 ${yeelightState.power ? `${yeelightState.color} (${yeelightState.bright})` : 'off'} &nbsp;
     📹 ${swtchState.B ? 'on' : 'off'} &nbsp;
     🔔 ${firstMove ? 'y' : 'n'} &nbsp;
     🤖 ${automation ? 'y' : 'n'} &nbsp;
-    📍 ${btState.inRange ? 'in' : 'out'}
+    📍 ${btState.inRange ? 'in' : 'out'}<br>
+    💡 ${yeelightState.power ? `${yeelightState.color || `${yeelightState.temperature}k`} (${yeelightState.brightness})` : 'off'}
   `);
 });
 

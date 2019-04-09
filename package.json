@@ -13,7 +13,6 @@
   "license": "ISC",
   "dependencies": {
     "btwatch": "^1.1.0",
-    "colorsys": "^1.0.22",
     "conf": "^2.0.0",
     "cron": "^1.7.0",
     "dateformat": "^2.0.0",
