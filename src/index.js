@@ -318,7 +318,7 @@ app.get('/shortcuts/light-off', async (req, res) => {
 });
 
 app.get('/shortcuts/cam-toggle', (req, res) => {
-  swtch.send('B', swtch.getState().B);
+  swtch.send('B', !swtch.getState().B);
   res.send('ok');
 });
 
