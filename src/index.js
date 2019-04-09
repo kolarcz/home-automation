@@ -21,7 +21,7 @@ const Relay = require('./modules/relay');
 const Pir = require('./modules/pir');
 const TempDarksky = require('./modules/temp-darksky');
 const TempDHT22 = require('./modules/temp-dht22');
-const Clock = require('./modules/clock');
+const LaMetric = require('./modules/lametric');
 const Bt = require('./modules/bt');
 const Sun = require('./modules/sun');
 const Notify = require('./modules/notify');
@@ -86,10 +86,10 @@ const tempDht22 = new TempDHT22(
   +process.env.TEMP_PIN_POWER,
   +process.env.TEMP_PIN_DATA
 );
-const clock = new Clock(
-  process.env.CLOCK_IP_ADDRESS,
-  process.env.CLOCK_API_KEY,
-  process.env.CLOCK_TOKEN
+const lametric = new LaMetric(
+  process.env.LAMETRIC_IP_ADDRESS,
+  process.env.LAMETRIC_API_KEY,
+  process.env.LAMETRIC_TOKEN
 );
 const bt = new Bt(
   process.env.PHONEBT_MAC_ADDRESS
@@ -107,19 +107,19 @@ const yeelight = new Yeelight(
 
 
 /* ************************************************************************************************
- CLOCK ACTUALIZE
+ LAMETRIC ACTUALIZE
  ************************************************************************************************ */
 
-const actualizeClockAppLight = async () => {
+const actualizeLametricAppLight = async () => {
   const { power: isLightOn } = await yeelight.getState();
 
-  clock.pushState('light', [{
+  lametric.updateWidget('light', [{
     icon: isLightOn ? icons.light_on : icons.light_off,
     text: isLightOn ? 'off' : 'on'
   }]);
 };
 
-const actualizeClockAppWeather = () => {
+const actualizeLametricAppWeather = () => {
   const tempProviderState = tempProvider.getState();
 
   const data = [{
@@ -134,13 +134,13 @@ const actualizeClockAppWeather = () => {
     });
   }
 
-  clock.pushState('weather', data);
+  lametric.updateWidget('weather', data);
 };
 
-setInterval(actualizeClockAppLight, 60 * 1000);
-setInterval(actualizeClockAppWeather, 60 * 1000);
-actualizeClockAppLight();
-actualizeClockAppWeather();
+setInterval(actualizeLametricAppLight, 60 * 1000);
+setInterval(actualizeLametricAppWeather, 60 * 1000);
+actualizeLametricAppLight();
+actualizeLametricAppWeather();
 
 
 /* ************************************************************************************************
@@ -211,7 +211,7 @@ sun.on('sunrise', async () => {
 });
 
 yeelight.on('change',
-  actualizeClockAppLight
+  actualizeLametricAppLight
 );
 
 
@@ -340,12 +340,12 @@ app.get('/shortcuts/automation-off', (req, res) => {
 });
 
 app.get('/shortcuts/radio-play', (req, res) => {
-  clock.sendAction('radio.play');
+  lametric.sendAction('radio.play');
   res.send('ok');
 });
 
 app.get('/shortcuts/radio-stop', (req, res) => {
-  clock.sendAction('radio.stop');
+  lametric.sendAction('radio.stop');
   res.send('ok');
 });
 

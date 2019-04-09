@@ -22,6 +22,8 @@
     "express-basic-auth": "^1.0.1",
     "firebase-admin": "^7.1.1",
     "iftttmaker": "^1.2.1",
+    "lametric-cloud": "^1.0.0",
+    "lametric-local": "^1.0.1",
     "lcd": "^2.0.3",
     "os-utils": "0.0.14",
     "piswitch": "^1.2.3",
