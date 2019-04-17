@@ -126,28 +126,8 @@ const actualizeLametricAppLight = async () => {
   }]);
 };
 
-/* const actualizeLametricAppWeather = () => {
-  const tempProviderState = tempProvider.getState();
-
-  const data = [{
-    text: Number.isFinite(tempProviderState.temp) ? `${Math.round(tempProviderState.temp)} °C` : '?',
-    icon: icons.weather[tempProviderState.tempIcon] || icons.weather['clear-day']
-  }];
-
-  if (tempProviderState.pop >= 33) {
-    data.push({
-      text: Number.isFinite(tempProviderState.pop) ? `${tempProviderState.pop} %` : '?',
-      icon: icons.weather[tempProviderState.popIcon] || icons.weather.rain
-    });
-  }
-
-  lametric.updateWidget('weather', data);
-}; */
-
 setInterval(actualizeLametricAppLight, 60 * 1000);
-// setInterval(actualizeLametricAppWeather, 60 * 1000);
 actualizeLametricAppLight();
-// actualizeLametricAppWeather();
 
 
 /* ************************************************************************************************
