@@ -4,7 +4,6 @@ const dateformat = require('dateformat');
 const vsprintf = require('sprintf-js').vsprintf;
 const wiringPi = require('wiring-pi');
 const Conf = require('conf');
-const firebase = require('firebase-admin');
 const { CronJob } = require('cron');
 
 require('dotenv').config({
@@ -26,6 +25,7 @@ const Bt = require('./modules/bt');
 const Sun = require('./modules/sun');
 const Notify = require('./modules/notify');
 const Yeelight = require('./modules/yeelight');
+const Firebase = require('./modules/firebase');
 
 
 /* ************************************************************************************************
@@ -104,6 +104,9 @@ const notify = new Notify(
 const yeelight = new Yeelight(
   process.env.YEELIGHT_IP
 );
+const firebase = new Firebase(
+  process.env.FIREBASE_ACCOUNT_FILE
+);
 
 
 /* ************************************************************************************************
@@ -123,7 +126,7 @@ const actualizeLametricAppLight = async () => {
   }]);
 };
 
-const actualizeLametricAppWeather = () => {
+/* const actualizeLametricAppWeather = () => {
   const tempProviderState = tempProvider.getState();
 
   const data = [{
@@ -139,12 +142,29 @@ const actualizeLametricAppWeather = () => {
   }
 
   lametric.updateWidget('weather', data);
-};
+}; */
 
 setInterval(actualizeLametricAppLight, 60 * 1000);
-setInterval(actualizeLametricAppWeather, 60 * 1000);
+// setInterval(actualizeLametricAppWeather, 60 * 1000);
 actualizeLametricAppLight();
-actualizeLametricAppWeather();
+// actualizeLametricAppWeather();
+
+
+/* ************************************************************************************************
+ FIREBASE
+ ************************************************************************************************ */
+
+new CronJob('0 */5 * * * *', () => {
+  const tempDht22State = tempDht22.getState();
+  const tempProviderState = tempProvider.getState();
+
+  firebase.saveWeather({
+    temperature: tempDht22State.temp,
+    humidity: tempDht22State.humidity,
+    temperatureOutside: tempProviderState.temp,
+    humidityOutside: tempProviderState.humidity
+  });
+}, null, true);
 
 
 /* ************************************************************************************************
@@ -176,6 +196,7 @@ bt.on('change', async (state) => {
 
     if (automation) {
       swtch.send('B', true);
+      lametric.sendAction('radio.stop');
       await yeelight.turnOff();
     }
   } else if (automation) {
@@ -240,6 +261,15 @@ lcd.on('ready', () => {
     const tempValue = Number(tempState.temp).toFixed(1);
     const humidityValue = Number(tempState.humidity).toFixed(1);
 
+    // const clear = () => new Promise((resolve, reject) => lcd.clear(err => (err ? reject(err) : resolve())));
+    // const print = text => new Promise((resolve, reject) => lcd.print(text, err => (err ? reject(err) : resolve())));
+
+    // await clear();
+    // lcd.setCursor(0, 0);
+    // await print(vsprintf('%4sC %3d%% %3dMB', [tempValue, systemState.cpu, systemState.memory]));
+    // lcd.setCursor(0, 1);
+    // await print(vsprintf('%4s%% %3dd %02d:%02d', [humidityValue, systemState.uptimeDays, systemState.uptimeHours, systemState.uptimeMinutes]));
+
     lcd.clear(() => {
       lcd.setCursor(0, 0);
       lcd.print(vsprintf('%4sC %3d%% %3dMB', [tempValue, systemState.cpu, systemState.memory]), () => {
@@ -253,35 +283,6 @@ lcd.on('ready', () => {
 
   redraw();
 });
-
-
-/* ************************************************************************************************
- FIREBASE
- ************************************************************************************************ */
-
-const firebaseAccountFile = process.env.FIREBASE_ACCOUNT_FILE;
-
-if (firebaseAccountFile) {
-  const firebaseAccount = require(`../${firebaseAccountFile}`); // eslint-disable-line
-
-  firebase.initializeApp({
-    credential: firebase.credential.cert(firebaseAccount)
-  });
-
-  new CronJob('0 */5 * * * *', () => {
-    const tempDht22State = tempDht22.getState();
-    const tempProviderState = tempProvider.getState();
-    const db = firebase.firestore();
-
-    db.collection('weather').add({
-      date: firebase.firestore.FieldValue.serverTimestamp(),
-      temperature: tempDht22State.temp,
-      humidity: tempDht22State.humidity,
-      temperatureOutside: tempProviderState.temp,
-      humidityOutside: tempProviderState.humidity
-    });
-  }, null, true);
-}
 
 
 /* ************************************************************************************************
