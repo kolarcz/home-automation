@@ -282,13 +282,13 @@ app.use((req, res, next) => {
   }
 });
 
-app.get('/lametric/light-toggle', async (req, res) => {
+app.get('/api/light-toggle', async (req, res) => {
   const { power } = await yeelight.getState();
   await yeelight[power ? 'turnOff' : 'turnOn']();
   res.send('ok');
 });
 
-app.get('/shortcuts/light-on', async (req, res) => {
+app.get('/api/light-on', async (req, res) => {
   try {
     if (req.query.color) {
       await yeelight.setColor(req.query.color, req.query.brightness);
@@ -303,38 +303,38 @@ app.get('/shortcuts/light-on', async (req, res) => {
   }
 });
 
-app.get('/shortcuts/light-off', async (req, res) => {
+app.get('/api/light-off', async (req, res) => {
   await yeelight.turnOff();
   res.send('ok');
 });
 
-app.get('/shortcuts/cam-toggle', (req, res) => {
+app.get('/api/cam-toggle', (req, res) => {
   swtch.send('B', !swtch.getState().B);
   res.send('ok');
 });
 
-app.get('/shortcuts/automation-toggle', (req, res) => {
+app.get('/api/automation-toggle', (req, res) => {
   automation = !automation;
   if (storage) storage.set('automation', automation);
   res.send('ok');
 });
 
-app.get('/shortcuts/radio-play', (req, res) => {
+app.get('/api/radio-play', (req, res) => {
   lametric.sendAction('radio.play');
   res.send('ok');
 });
 
-app.get('/shortcuts/radio-stop', (req, res) => {
+app.get('/api/radio-stop', (req, res) => {
   lametric.sendAction('radio.stop');
   res.send('ok');
 });
 
-app.get('/shortcuts/open', (req, res) => {
+app.get('/api/open', (req, res) => {
   relay.open();
   res.send('ok');
 });
 
-app.get('/shortcuts/info', async (req, res) => {
+app.get('/api/info', async (req, res) => {
   const pirState = pir.getState();
   const tempProviderState = tempProvider.getState();
   const tempDht22State = tempDht22.getState();

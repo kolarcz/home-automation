@@ -7,7 +7,7 @@ module.exports = class LaMetric {
     const baseUrl = `https://${ipAddress}:4343`;
 
     this.customApps = {
-      light: 'com.lametric.d5c4cf7d936b78ec26550431a4609e6c/1',
+      light: 'com.lametric.d5c4cf7d936b78ec26550431a4609e6c/3',
       weather: 'com.lametric.4204a2222b86d7e187f624a55f927209/3'
     };
 
