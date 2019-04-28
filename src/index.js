@@ -231,7 +231,10 @@ pir.on('moveend', () => wiringPi.digitalWrite(+process.env.LCD_PIN_BACKLIGHT, wi
 pir.on('move', async () => {
   const { isNight } = sun.getState();
   const { power: isLightOn } = await yeelight.getState(false);
-  if (!isNight || isLightOn) wiringPi.digitalWrite(+process.env.LCD_PIN_BACKLIGHT, wiringPi.HIGH);
+
+  if ((!isNight || isLightOn) && automation) {
+    wiringPi.digitalWrite(+process.env.LCD_PIN_BACKLIGHT, wiringPi.HIGH);
+  }
 });
 
 lcd.on('ready', () => {
