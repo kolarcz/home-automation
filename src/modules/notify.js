@@ -8,7 +8,7 @@ module.exports = class Notify {
   }
 
   send(message) {
-    return this.ifttt.send('notify', 'rpi', `${message} (${dateformat('d. m. yyyy H:MM:ss')})`);
+    return this.ifttt.send('notify', `rpi: ${message} (${dateformat('d. m. yyyy H:MM:ss')})`);
   }
 
 };
