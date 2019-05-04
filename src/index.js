@@ -225,14 +225,14 @@ yeelight.on('change',
  ************************************************************************************************ */
 
 wiringPi.pinMode(+process.env.LCD_PIN_BACKLIGHT, wiringPi.OUTPUT);
-wiringPi.digitalWrite(+process.env.LCD_PIN_BACKLIGHT, wiringPi.HIGH);
+wiringPi.digitalWrite(+process.env.LCD_PIN_BACKLIGHT, wiringPi.LOW);
 
 pir.on('moveend', () => wiringPi.digitalWrite(+process.env.LCD_PIN_BACKLIGHT, wiringPi.LOW));
 pir.on('move', async () => {
   const { isNight } = sun.getState();
   const { power: isLightOn } = await yeelight.getState(false);
 
-  if ((!isNight || isLightOn) && automation) {
+  if (isNight && isLightOn && automation) {
     wiringPi.digitalWrite(+process.env.LCD_PIN_BACKLIGHT, wiringPi.HIGH);
   }
 });
