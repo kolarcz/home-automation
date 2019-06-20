@@ -25,7 +25,7 @@ const Bt = require('./modules/bt');
 const Sun = require('./modules/sun');
 const Notify = require('./modules/notify');
 const Yeelight = require('./modules/yeelight');
-const Firebase = require('./modules/firebase');
+const FirebaseDb = require('./modules/firebase-database');
 
 
 /* ************************************************************************************************
@@ -104,7 +104,7 @@ const notify = new Notify(
 const yeelight = new Yeelight(
   process.env.YEELIGHT_IP
 );
-const firebase = new Firebase(
+const firebaseDb = new FirebaseDb(
   process.env.FIREBASE_ACCOUNT_FILE
 );
 
@@ -138,12 +138,14 @@ new CronJob('0 */5 * * * *', () => {
   const tempDht22State = tempDht22.getState();
   const tempProviderState = tempProvider.getState();
 
-  firebase.saveWeather({
+  const data = {
     temperature: tempDht22State.temp,
     humidity: tempDht22State.humidity,
     temperatureOutside: tempProviderState.temp,
     humidityOutside: tempProviderState.humidity
-  });
+  };
+
+  firebaseDb.saveWeather(data);
 }, null, true);
 
 

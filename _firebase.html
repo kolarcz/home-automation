@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <script src="https://www.gstatic.com/firebasejs/5.9.1/firebase.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.13.0/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0"></script>
+  </head>
+  <body>
+    <canvas id="chart"></canvas>
+    <script>
+      /**
+       * Configs
+       */
+
+      const projectId = 'xxxxxxxxx';
+      const apiKey = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
+      const credentials = ['xxxxxxx@gmail.com', 'xxxxxxx'];
+      const collection = 'weather'; // || weatherByDay
+      const limit = 12 * 24 * 10; // 10 days
+      const groupedByHours = true;
+
+
+      /**
+       * Functions
+       */
+
+      function groupByHours(data) {
+        const tmp = {};
+
+        data.forEach(({ x, y }) => {
+          const key = `${x.getFullYear()}-${x.getMonth()}-${x.getDate()}-${x.getHours()}`;
+          if (!tmp[key]) tmp[key] = [];
+          tmp[key].push(y);
+        });
+
+        const newData = Object.entries(tmp).map(([dateKey, values]) => {
+          const [ year, month, day, hour ] = dateKey.split('-');
+          const date = new Date(year, month, day, hour);
+          const average = Math.round(values.reduce((a, b) => a + b) / values.length * 100) / 100;
+
+          return {
+            x: date,
+            y: average
+          };
+        });
+
+        return newData;
+      }
+
+      function getDataFromFirebaseFs(collection, limit, callback) {
+        firebase.firestore()
+          .collection(collection)
+          .orderBy('date', 'desc')
+          .limit(limit)
+          .onSnapshot((snapshot) => {
+            const data = snapshot.docs
+              .map(d => d.data())
+              .map((record) => ({
+                ...record,
+                date: record.date.toDate()
+              }));
+
+            callback(data);
+          });
+      }
+
+      function getDataFromFirebaseDb(collection, limit, callback) {
+        firebase.database()
+          .ref(collection)
+          .orderByChild('date')
+          .limitToLast(limit)
+          .on('value', (snapshot) => {
+            const data = Object.values(snapshot.val())
+              .map((record) => ({
+                ...record,
+                date: new Date(record.date)
+              }));
+
+            callback(data);
+          });
+      }
+
+
+      /**
+       * Chart
+       */
+
+      const ctx = document.getElementById('chart').getContext('2d');
+
+      const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          datasets: [{
+            label: 'Teplota',
+            backgroundColor: 'red',
+            borderColor: '#ff8888',
+            fill: false,
+            yAxisID: 'id-temperature'
+          }, {
+            label: 'Vlhkost',
+            backgroundColor: 'blue',
+            borderColor: '#8888ff',
+            fill: false,
+            yAxisID: 'id-humidity'
+          }, {
+            label: 'Teplota venku',
+            backgroundColor: '#ffcccc',
+            borderColor: '#ffdddd',
+            fill: false,
+            yAxisID: 'id-temperature'
+          }, {
+            label: 'Vlhkost venku',
+            backgroundColor: '#ccccff',
+            borderColor: '#ddddff',
+            fill: false,
+            yAxisID: 'id-humidity'
+          }]
+        },
+        options: {
+          responsive: true,
+          title: {
+            display: true,
+            text: 'Doma'
+          },
+          scales: {
+            xAxes: [{
+              type: 'time',
+              time: {
+                unit: 'hour',
+                displayFormats: {
+                  hour: 'H:mm'
+                }
+              },
+              scaleLabel: {
+                display: true,
+                labelString: 'Čas'
+              }
+            }],
+            yAxes: [{
+              type: 'linear',
+              display: true,
+              position: 'left',
+              id: 'id-temperature',
+              ticks: {
+                userCallback: tick => `${tick.toString()} °C`
+              }
+            }, {
+              type: 'linear',
+              display: true,
+              position: 'right',
+              id: 'id-humidity',
+              gridLines: {
+                drawOnChartArea: false
+              },
+              ticks: {
+                userCallback: tick => `${tick.toString()} %`
+              }
+            }]
+          }
+        }
+      });
+
+
+      /**
+       * Firebase
+       */
+
+      firebase.initializeApp({
+         apiKey,
+         projectId,
+         databaseURL: `https://${projectId}.firebaseio.com`
+      });
+
+      firebase.auth().signInWithEmailAndPassword(...credentials).then(() => {
+        getDataFromFirebaseDb(collection, limit, (data) => {
+          const dataTemperature = [];
+          const dataHumidity = [];
+          const dataTemperatureOutside = [];
+          const dataHumidityOutside = [];
+
+          data.forEach((record) => {
+            const { date, temperature, humidity, temperatureOutside, humidityOutside } = record;
+
+            dataTemperature.push({
+              x: date,
+              y: temperature
+            });
+            dataHumidity.push({
+              x: date,
+              y: humidity
+            });
+            dataTemperatureOutside.push({
+              x: date,
+              y: temperatureOutside
+            });
+            dataHumidityOutside.push({
+              x: date,
+              y: humidityOutside
+            });
+          });
+
+          chart.data.datasets[0].data = groupedByHours ? groupByHours(dataTemperature) : dataTemperature;
+          chart.data.datasets[1].data = groupedByHours ? groupByHours(dataHumidity) : dataHumidity;
+          chart.data.datasets[2].data = groupedByHours ? groupByHours(dataTemperatureOutside) : dataTemperatureOutside;
+          chart.data.datasets[3].data = groupedByHours ? groupByHours(dataHumidityOutside) : dataHumidityOutside;
+
+          chart.update();
+        });
+      });
+    </script>
+  </body>
+</html>

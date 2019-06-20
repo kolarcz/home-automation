@@ -7,7 +7,7 @@ module.exports = class Firebase {
 
     this.firebase = firebase.initializeApp({
       credential: firebase.credential.cert(firebaseAccount)
-    });
+    }, `firebase-firestore_${Math.random()}`);
   }
 
   async saveWeather(inputData) {
@@ -20,20 +20,17 @@ module.exports = class Firebase {
 
     const serverTimestamp = firebase.firestore.Timestamp;
 
-    const t = serverTimestamp.now().toDate();
-    t.setHours(0);
-    t.setMinutes(0);
-    t.setSeconds(0);
-    t.setMilliseconds(0);
-    const serverTimeBegin = serverTimestamp.fromDate(t);
-    const serverTimeNow = serverTimestamp.now();
+    const tNow = new Date();
+    const tBegin = new Date(tNow.getFullYear(), tNow.getMonth(), tNow.getDate());
+    const serverTimeNow = serverTimestamp.fromDate(tNow);
+    const serverTimeBegin = serverTimestamp.fromDate(tBegin);
 
     const saveData = { date: serverTimeNow };
     keysToSave.forEach((key) => { saveData[key] = inputData[key]; });
     await dbWeather.add(saveData);
 
     const result = await dbWeather
-      .where('date', '>', serverTimeBegin)
+      .where('date', '>=', serverTimeBegin)
       .where('date', '<=', serverTimeNow)
       .get();
 
@@ -51,7 +48,7 @@ module.exports = class Firebase {
     });
 
     const resultSum = await dbWeatherByDay
-      .where('date', '>', serverTimeBegin)
+      .where('date', '>=', serverTimeBegin)
       .where('date', '<=', serverTimeNow)
       .orderBy('date', 'desc')
       .limit(1)
