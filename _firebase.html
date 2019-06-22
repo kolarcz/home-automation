@@ -93,28 +93,32 @@
         data: {
           datasets: [{
             label: 'Teplota',
-            backgroundColor: 'red',
-            borderColor: '#ff8888',
+            backgroundColor: '#ff8888',
+            borderColor: 'red',
+            yAxisID: 'id-temperature',
             fill: false,
-            yAxisID: 'id-temperature'
+            unit: '°C'
           }, {
             label: 'Vlhkost',
-            backgroundColor: 'blue',
-            borderColor: '#8888ff',
+            backgroundColor: '#8888ff',
+            borderColor: 'blue',
+            yAxisID: 'id-humidity',
             fill: false,
-            yAxisID: 'id-humidity'
+            unit: '%'
           }, {
             label: 'Teplota venku',
-            backgroundColor: '#ffcccc',
-            borderColor: '#ffdddd',
+            backgroundColor: '#ffe9e9',
+            borderColor: '#ffd9d9',
+            yAxisID: 'id-temperature',
             fill: false,
-            yAxisID: 'id-temperature'
+            unit: '°C'
           }, {
             label: 'Vlhkost venku',
-            backgroundColor: '#ccccff',
-            borderColor: '#ddddff',
+            backgroundColor: '#e9e9ff',
+            borderColor: '#d9d9ff',
+            yAxisID: 'id-humidity',
             fill: false,
-            yAxisID: 'id-humidity'
+            unit: '%'
           }]
         },
         options: {
@@ -123,38 +127,56 @@
             display: true,
             text: 'Doma'
           },
+          tooltips: {
+            mode: 'nearest', // index
+            position: 'nearest', // average
+            intersect: true,
+            callbacks: {
+              title: TooltipItems => moment(new Date(TooltipItems[0].label)).format('D. M. H:mm'),
+              label: (TooltipItem, obj) => {console.log(TooltipItem)
+                const dataset = obj.datasets[TooltipItem.datasetIndex];
+                return `${dataset.label}: ${TooltipItem.yLabel.toLocaleString()} ${dataset.unit}`
+              }
+            }
+          },
           scales: {
             xAxes: [{
               type: 'time',
+              scaleLabel: {
+                display: true,
+                labelString: 'Čas'
+              },
               time: {
                 unit: 'hour',
                 displayFormats: {
                   hour: 'H:mm'
                 }
-              },
-              scaleLabel: {
-                display: true,
-                labelString: 'Čas'
               }
             }],
             yAxes: [{
               type: 'linear',
-              display: true,
+              scaleLabel: {
+                display: true,
+                labelString: 'Teplota'
+              },
               position: 'left',
               id: 'id-temperature',
               ticks: {
-                userCallback: tick => `${tick.toString()} °C`
+                userCallback: tick => `${tick.toLocaleString()} °C`
               }
             }, {
               type: 'linear',
-              display: true,
+              scaleLabel: {
+                display: true,
+                labelString: 'Vlhkost'
+              },
               position: 'right',
               id: 'id-humidity',
               gridLines: {
                 drawOnChartArea: false
               },
               ticks: {
-                userCallback: tick => `${tick.toString()} %`
+                userCallback: tick => `${tick.toLocaleString()} %`
               }
             }]
           }
