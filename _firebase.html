@@ -132,7 +132,8 @@
             position: 'nearest', // average
             intersect: true,
             callbacks: {
-              title: TooltipItems => moment(new Date(TooltipItems[0].label)).format('D. M. H:mm'),
+              title: TooltipItems => moment(new Date(TooltipItems[0].label)).format('D. M. H:mm')
+                + (groupedByHours ? ' (øh)' : ''),
               label: (TooltipItem, obj) => {
                 const dataset = obj.datasets[TooltipItem.datasetIndex];
                 return `${dataset.label}: ${TooltipItem.yLabel.toLocaleString()} ${dataset.unit}`
