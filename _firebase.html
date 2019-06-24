@@ -5,6 +5,7 @@
     <script src="https://www.gstatic.com/firebasejs/5.9.1/firebase.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.13.0/moment.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0"></script>
+    <title>Home</title>
   </head>
   <body>
     <canvas id="chart"></canvas>
@@ -92,28 +93,28 @@
         type: 'line',
         data: {
           datasets: [{
-            label: 'Teplota',
+            label: 'Temperature',
             backgroundColor: '#ff8888',
             borderColor: 'red',
             yAxisID: 'id-temperature',
             fill: false,
             unit: '°C'
           }, {
-            label: 'Vlhkost',
+            label: 'Humidity',
             backgroundColor: '#8888ff',
             borderColor: 'blue',
             yAxisID: 'id-humidity',
             fill: false,
             unit: '%'
           }, {
-            label: 'Teplota venku',
+            label: 'Temperature outside',
             backgroundColor: '#ffe9e9',
             borderColor: '#ffd9d9',
             yAxisID: 'id-temperature',
             fill: false,
             unit: '°C'
           }, {
-            label: 'Vlhkost venku',
+            label: 'Humidity outside',
             backgroundColor: '#e9e9ff',
             borderColor: '#d9d9ff',
             yAxisID: 'id-humidity',
@@ -125,7 +126,7 @@
           responsive: true,
           title: {
             display: true,
-            text: 'Doma'
+            text: 'Home'
           },
           tooltips: {
             mode: 'nearest', // index
@@ -145,31 +146,35 @@
               type: 'time',
               scaleLabel: {
                 display: true,
-                labelString: 'Čas'
+                labelString: 'Time'
               },
               time: {
                 unit: 'hour',
                 displayFormats: {
                   hour: 'H:mm'
                 }
+              },
+              ticks: {
+                padding: 10
               }
             }],
             yAxes: [{
               type: 'linear',
               scaleLabel: {
                 display: true,
-                labelString: 'Teplota'
+                labelString: 'Temperature'
               },
               position: 'left',
               id: 'id-temperature',
               ticks: {
-                userCallback: tick => `${tick.toLocaleString()} °C`
+                callback: tick => `${tick.toLocaleString()} °C`,
+                padding: 10
               }
             }, {
               type: 'linear',
               scaleLabel: {
                 display: true,
-                labelString: 'Vlhkost'
+                labelString: 'Humidity'
               },
               position: 'right',
               id: 'id-humidity',
@@ -177,7 +182,8 @@
                 drawOnChartArea: false
               },
               ticks: {
-                userCallback: tick => `${tick.toLocaleString()} %`
+                callback: tick => `${tick.toLocaleString()} %`,
+                padding: 10
               }
             }]
           }
