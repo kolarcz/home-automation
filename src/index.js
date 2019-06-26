@@ -363,13 +363,13 @@ app.get('/api/info', async (req, res) => {
   res.send(`
     ${emoji.thermometer} ${numbFixed(tempDht22State.temp, 1)}°C ${numbFixed(tempDht22State.humidity, 1)}% &nbsp;
     ${providerIcons.temp} ${numbFixed(tempProviderState.temp)}°C ${numbFixed(tempProviderState.humidity)}% &nbsp;
-    ${providerIcons.pop} ${numbFixed(tempProviderState.pop)}<br>
+    ${providerIcons.pop} ${numbFixed(tempProviderState.pop)}%<br>
     🏃 ${lastPirDate} &nbsp; 🕰 ${uptimeDate}<br>
     📹 ${swtchState.B ? 'on' : 'off'} &nbsp;
     🔔 ${firstMove ? 'y' : 'n'} &nbsp;
     🤖 ${automation ? 'y' : 'n'} &nbsp;
     📍 ${btState.inRange ? 'in' : 'out'}<br>
-    💡 ${yeelightState.power ? `${yeelightState.color || `${yeelightState.temperature}k`} (${yeelightState.brightness})` : 'off'}
+    💡 ${yeelightState.power ? `${yeelightState.color || `${yeelightState.temperature}k`} ${yeelightState.brightness}%` : 'off'}
   `);
 });
 
