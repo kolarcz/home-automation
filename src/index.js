@@ -1,9 +1,12 @@
 const express = require('express');
 const expressBasicAuth = require('express-basic-auth');
 const dateformat = require('dateformat');
-const vsprintf = require('sprintf-js').vsprintf;
-const wiringPi = require('wiring-pi');
 const Conf = require('conf');
+const fs = require('fs');
+const i2c = require('i2c-bus');
+const Oled = require('oled-i2c-bus');
+const font = require('oled-font-5x7');
+const { PNG } = require('pngjs');
 const { CronJob } = require('cron');
 
 require('dotenv').config({
@@ -11,8 +14,6 @@ require('dotenv').config({
 });
 
 const { icons, emoji } = require('./icons');
-
-const Lcd = require('lcd');
 
 const System = require('./modules/system');
 const Switch = require('./modules/switch');
@@ -26,6 +27,16 @@ const Sun = require('./modules/sun');
 const Notify = require('./modules/notify');
 const Yeelight = require('./modules/yeelight');
 const FirebaseDb = require('./modules/firebase-database');
+
+
+const numbFixed = (number, fixed = 0) => {
+  if (Number.isFinite(number)) {
+    const result = Number(number).toFixed(fixed).replace('.', ',');
+    return result;
+  }
+
+  return '?';
+};
 
 
 /* ************************************************************************************************
@@ -48,17 +59,9 @@ if (storage) {
  INSTANCES
  ************************************************************************************************ */
 
-const lcd = new Lcd({
-  rs: process.env.LCD_PIN_RS,
-  e: process.env.LCD_PIN_E,
-  data: [
-    process.env.LCD_PIN_DATA_DB4,
-    process.env.LCD_PIN_DATA_DB5,
-    process.env.LCD_PIN_DATA_DB6,
-    process.env.LCD_PIN_DATA_DB7
-  ],
-  cols: 16,
-  rows: 2
+const oled = new Oled(i2c.openSync(1), {
+  width: 128,
+  height: 32
 });
 
 const system = new System();
@@ -223,51 +226,51 @@ yeelight.on('change',
 
 
 /* ************************************************************************************************
- LCD
+ OLED
  ************************************************************************************************ */
 
-wiringPi.pinMode(+process.env.LCD_PIN_BACKLIGHT, wiringPi.OUTPUT);
-wiringPi.digitalWrite(+process.env.LCD_PIN_BACKLIGHT, wiringPi.LOW);
+oled.turnOnDisplay();
+oled.clearDisplay();
 
-pir.on('moveend', () => wiringPi.digitalWrite(+process.env.LCD_PIN_BACKLIGHT, wiringPi.LOW));
-pir.on('move', async () => {
-  const { isNight } = sun.getState();
-  const { power: isLightOn } = await yeelight.getState(false);
+pir.on('moveend', () => oled.dimDisplay(true));
+pir.on('move', () => oled.dimDisplay(false));
 
-  if (isNight && isLightOn && automation) {
-    wiringPi.digitalWrite(+process.env.LCD_PIN_BACKLIGHT, wiringPi.HIGH);
-  }
-});
+fs.createReadStream('./raspberry-icon.png')
+  .pipe(new PNG({ filterType: 4 }))
+  .on('parsed', function () {
+    oled.drawRGBAImage(this, 0, 0);
+  });
 
-lcd.on('ready', () => {
-  const redraw = () => {
-    const systemState = system.getState();
-    const tempState = tempDht22.getState();
-    const tempValue = Number(tempState.temp).toFixed(1);
-    const humidityValue = Number(tempState.humidity).toFixed(1);
+const oledRedraw = () => {
+  const systemState = system.getState();
+  const tempDht22State = tempDht22.getState();
+  const tempProviderState = tempProvider.getState();
 
-    // const clear = () => new Promise((resolve, reject) => lcd.clear(err => (err ? reject(err) : resolve())));
-    // const print = text => new Promise((resolve, reject) => lcd.print(text, err => (err ? reject(err) : resolve())));
+  const tempOut = numbFixed(tempProviderState.temp).padStart(3);
+  const humidityOut = numbFixed(tempProviderState.humidity).padStart(3);
+  const tempIn = numbFixed(tempDht22State.temp, 1).padStart(5);
+  const humidityIn = numbFixed(tempDht22State.humidity, 1).padStart(5);
 
-    // await clear();
-    // lcd.setCursor(0, 0);
-    // await print(vsprintf('%4sC %3d%% %3dMB', [tempValue, systemState.cpu, systemState.memory]));
-    // lcd.setCursor(0, 1);
-    // await print(vsprintf('%4s%% %3dd %02d:%02d', [humidityValue, systemState.uptimeDays, systemState.uptimeHours, systemState.uptimeMinutes]));
-
-    lcd.clear(() => {
-      lcd.setCursor(0, 0);
-      lcd.print(vsprintf('%4sC %3d%% %3dMB', [tempValue, systemState.cpu, systemState.memory]), () => {
-        lcd.setCursor(0, 1);
-        lcd.print(vsprintf('%4s%% %3dd %02d:%02d', [humidityValue, systemState.uptimeDays, systemState.uptimeHours, systemState.uptimeMinutes]), () => {
-          setTimeout(redraw, 3 * 1000);
-        });
-      });
-    });
+  const cpu = String(systemState.cpu).padStart(3);
+  const uptime = {
+    days: String(systemState.uptimeDays).padStart(4),
+    hours: String(systemState.uptimeHours).padStart(2),
+    minutes: String(systemState.uptimeMinutes).padStart(2, '0')
   };
 
-  redraw();
-});
+  oled.setCursor(33, 1);
+  oled.writeString(font, 1, `${cpu} %${uptime.days} ${uptime.hours}:${uptime.minutes}`);
+
+  oled.setCursor(33, 15);
+  oled.writeString(font, 1, `  ${tempOut}°C ${tempIn}°C`);
+
+  oled.setCursor(33, 25);
+  oled.writeString(font, 1, `  ${humidityOut} % ${humidityIn} %`);
+
+  setTimeout(oledRedraw, 3 * 1000);
+};
+
+oledRedraw();
 
 
 /* ************************************************************************************************
@@ -352,18 +355,15 @@ app.get('/api/info', async (req, res) => {
   const uptimeDate = dateformat(systemState.uptimeStart, dateFormat);
   const lastPirDate = pirState.last ? dateformat(pirState.last, dateFormat) : '---';
 
-  const tempProviderValues = {
-    temp: Number.isFinite(tempProviderState.temp) ? `${Math.round(tempProviderState.temp)}°C` : '?',
-    tempIcon: emoji.weather[tempProviderState.tempIcon] || emoji.weather['clear-day'],
-    pop: Number.isFinite(tempProviderState.pop) ? `${tempProviderState.pop}%` : '?',
-    popIcon: emoji.weather[tempProviderState.popIcon] || emoji.weather.rain,
-    humidity: Number.isFinite(tempProviderState.humidity) ? `${tempProviderState.humidity}%` : '?'
+  const providerIcons = {
+    temp: emoji.weather[tempProviderState.tempIcon] || emoji.weather['clear-day'],
+    pop: emoji.weather[tempProviderState.popIcon] || emoji.weather.rain
   };
 
   res.send(`
-    ${tempDht22State.temp ? `${emoji.thermometer} ${tempDht22State.temp}°C ${tempDht22State.humidity}%` : `${emoji.thermometer} ? ?`} &nbsp;
-    ${tempProviderValues.tempIcon} ${tempProviderValues.temp} ${tempProviderValues.humidity} &nbsp;
-    ${tempProviderValues.popIcon} ${tempProviderValues.pop}<br>
+    ${emoji.thermometer} ${numbFixed(tempDht22State.temp, 1)}°C ${numbFixed(tempDht22State.humidity, 1)}% &nbsp;
+    ${providerIcons.temp} ${numbFixed(tempProviderState.temp)}°C ${numbFixed(tempProviderState.humidity)}% &nbsp;
+    ${providerIcons.pop} ${numbFixed(tempProviderState.pop)}<br>
     🏃 ${lastPirDate} &nbsp; 🕰 ${uptimeDate}<br>
     📹 ${swtchState.B ? 'on' : 'off'} &nbsp;
     🔔 ${firstMove ? 'y' : 'n'} &nbsp;
