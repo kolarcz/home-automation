@@ -8,7 +8,8 @@
     <title>Home</title>
   </head>
   <body>
-    <canvas id="chart"></canvas>
+    <svg id="loading" width="100%" height="80" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid"><circle cx="84" cy="50" r="0" fill="#ebebeb"><animate attributeName="r" values="10;0;0;0;0" keyTimes="0;0.25;0.5;0.75;1" keySplines="0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1" calcMode="spline" dur="1.5s" repeatCount="indefinite" begin="0s"/><animate attributeName="cx" values="84;84;84;84;84" keyTimes="0;0.25;0.5;0.75;1" keySplines="0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1" calcMode="spline" dur="1.5s" repeatCount="indefinite" begin="0s"/></circle><circle cx="84" cy="50" r=".117" fill="#ebebeb"><animate attributeName="r" values="0;10;10;10;0" keyTimes="0;0.25;0.5;0.75;1" keySplines="0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1" calcMode="spline" dur="1.5s" repeatCount="indefinite" begin="-0.75s"/><animate attributeName="cx" values="16;16;50;84;84" keyTimes="0;0.25;0.5;0.75;1" keySplines="0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1" calcMode="spline" dur="1.5s" repeatCount="indefinite" begin="-0.75s"/></circle><circle cx="83.603" cy="50" r="10" fill="#ebebeb"><animate attributeName="r" values="0;10;10;10;0" keyTimes="0;0.25;0.5;0.75;1" keySplines="0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1" calcMode="spline" dur="1.5s" repeatCount="indefinite" begin="-0.375s"/><animate attributeName="cx" values="16;16;50;84;84" keyTimes="0;0.25;0.5;0.75;1" keySplines="0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1" calcMode="spline" dur="1.5s" repeatCount="indefinite" begin="-0.375s"/></circle><circle cx="49.603" cy="50" r="10" fill="#ebebeb"><animate attributeName="r" values="0;10;10;10;0" keyTimes="0;0.25;0.5;0.75;1" keySplines="0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1" calcMode="spline" dur="1.5s" repeatCount="indefinite" begin="0s"/><animate attributeName="cx" values="16;16;50;84;84" keyTimes="0;0.25;0.5;0.75;1" keySplines="0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1" calcMode="spline" dur="1.5s" repeatCount="indefinite" begin="0s"/></circle><circle cx="16" cy="50" r="9.883" fill="#ebebeb"><animate attributeName="r" values="0;0;10;10;10" keyTimes="0;0.25;0.5;0.75;1" keySplines="0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1" calcMode="spline" dur="1.5s" repeatCount="indefinite" begin="0s"/><animate attributeName="cx" values="16;16;16;50;84" keyTimes="0;0.25;0.5;0.75;1" keySplines="0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1" calcMode="spline" dur="1.5s" repeatCount="indefinite" begin="0s"/></circle></svg>
+    <canvas id="chart" style="display: none"></canvas>
     <script>
       /**
        * Configs
@@ -17,54 +18,13 @@
       const projectId = 'xxxxxxxxx';
       const apiKey = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
       const credentials = ['xxxxxxx@gmail.com', 'xxxxxxx'];
-      const collection = 'weather'; // || weatherByDay
-      const limit = 12 * 24 * 10; // 10 days
-      const groupedByHours = true;
+      const collection = 'weatherByHour';
+      const limit = 7 * 24;
 
 
       /**
        * Functions
        */
-
-      function groupByHours(data) {
-        const tmp = {};
-
-        data.forEach(({ x, y }) => {
-          const key = `${x.getFullYear()}-${x.getMonth()}-${x.getDate()}-${x.getHours()}`;
-          if (!tmp[key]) tmp[key] = [];
-          tmp[key].push(y);
-        });
-
-        const newData = Object.entries(tmp).map(([dateKey, values]) => {
-          const [ year, month, day, hour ] = dateKey.split('-');
-          const date = new Date(year, month, day, hour);
-          const average = Math.round(values.reduce((a, b) => a + b) / values.length * 100) / 100;
-
-          return {
-            x: date,
-            y: average
-          };
-        });
-
-        return newData;
-      }
-
-      function getDataFromFirebaseFs(collection, limit, callback) {
-        firebase.firestore()
-          .collection(collection)
-          .orderBy('date', 'desc')
-          .limit(limit)
-          .onSnapshot((snapshot) => {
-            const data = snapshot.docs
-              .map(d => d.data())
-              .map((record) => ({
-                ...record,
-                date: record.date.toDate()
-              }));
-
-            callback(data);
-          });
-      }
 
       function getDataFromFirebaseDb(collection, limit, callback) {
         firebase.database()
@@ -129,12 +89,11 @@
             text: 'Home'
           },
           tooltips: {
-            mode: 'nearest', // index
-            position: 'nearest', // average
+            mode: 'nearest',
+            position: 'nearest',
             intersect: true,
             callbacks: {
-              title: TooltipItems => moment(new Date(TooltipItems[0].label)).format('D. M. H:mm')
-                + (groupedByHours ? ' (øh)' : ''),
+              title: TooltipItems => `${moment(new Date(TooltipItems[0].label)).format('D. M. H:mm')} (øh)`,
               label: (TooltipItem, obj) => {
                 const dataset = obj.datasets[TooltipItem.datasetIndex];
                 return `${dataset.label}: ${TooltipItem.yLabel.toLocaleString()} ${dataset.unit}`
@@ -229,10 +188,13 @@
             });
           });
 
-          chart.data.datasets[0].data = groupedByHours ? groupByHours(dataTemperature) : dataTemperature;
-          chart.data.datasets[1].data = groupedByHours ? groupByHours(dataHumidity) : dataHumidity;
-          chart.data.datasets[2].data = groupedByHours ? groupByHours(dataTemperatureOutside) : dataTemperatureOutside;
-          chart.data.datasets[3].data = groupedByHours ? groupByHours(dataHumidityOutside) : dataHumidityOutside;
+          chart.data.datasets[0].data = dataTemperature;
+          chart.data.datasets[1].data = dataHumidity;
+          chart.data.datasets[2].data = dataTemperatureOutside;
+          chart.data.datasets[3].data = dataHumidityOutside;
+
+          document.getElementById('loading').style.display = 'none';
+          chart.canvas.style.display = 'block';
 
           chart.update();
         });

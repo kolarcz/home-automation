@@ -9,59 +9,67 @@ module.exports = class Firebase {
       credential: firebase.credential.cert(firebaseAccount),
       databaseURL: `https://${firebaseAccount.project_id}.firebaseio.com`
     }, `firebase-database_${Math.random()}`);
+
+    this.keysToSave = ['temperature', 'humidity', 'temperatureOutside', 'humidityOutside'];
   }
 
-  saveWeather(inputData) {
-    return new Promise((resolve, reject) => {
-      const keysToSave = ['temperature', 'humidity', 'temperatureOutside', 'humidityOutside'];
+  _groupData(data) {
+    const result = {};
 
-      const db = this.firebase.database();
+    this.keysToSave.forEach((key) => {
+      const values = data
+        .map(childSnapshot => childSnapshot[key])
+        .filter(Number.isFinite);
 
-      const dbWeather = db.ref('weather');
-      const dbWeatherByDay = db.ref('weatherByDay');
+      result[key] = values.length
+        ? (values.reduce((a, b) => a + b) / values.length)
+        : null;
+    });
 
-      const t = new Date();
-      const dateNow = t.getTime();
-      const dateBegin = (new Date(t.getFullYear(), t.getMonth(), t.getDate())).getTime();
+    return result;
+  }
 
-      const saveData = { date: dateNow };
-      keysToSave.forEach((key) => { saveData[key] = inputData[key]; });
+  async saveWeather(inputData) {
+    const db = this.firebase.database();
 
-      dbWeather.push().set(saveData, (err) => {
-        if (err) return reject();
+    const dbWeather = db.ref('weather');
+    const dbWeatherByHour = db.ref('weatherByHour');
+    const dbWeatherByDay = db.ref('weatherByDay');
 
+    const t = new Date();
+    const now = t.getTime();
+    const hourBegin = (new Date(t.getFullYear(), t.getMonth(), t.getDate(), t.getHours())).getTime();
+    const dayBegin = (new Date(t.getFullYear(), t.getMonth(), t.getDate())).getTime();
+
+    const saveData = { date: now };
+    this.keysToSave.forEach((key) => { saveData[key] = inputData[key]; });
+
+    await new Promise((resolve, reject) =>
+      dbWeather.push()
+        .set(saveData, err => (err ? reject : resolve)())
+    );
+
+    const createGroupFn = (dbCollection, begin, key) =>
+      new Promise((resolve, reject) => {
         dbWeather.orderByChild('date')
-          .startAt(dateBegin)
-          .endAt(dateNow)
+          .startAt(begin)
+          .endAt(now)
           .once('value', (snapshot) => {
             const saveDataSum = {
-              date: dateNow,
-              records: snapshot.numChildren()
+              date: now,
+              records: snapshot.numChildren(),
+              ...this._groupData(Object.values(snapshot.val()))
             };
 
-            keysToSave.forEach((key) => {
-              const values = Object.values(snapshot.val())
-                .map(childSnapshot => childSnapshot[key])
-                .filter(value => Number.isFinite(value));
-
-              saveDataSum[key] = values.length
-                ? (values.reduce((a, b) => a + b) / values.length)
-                : null;
-            });
-
-            const key = t.toISOString().substr(0, 10);
-            dbWeatherByDay.child(key).set(saveDataSum, () => {
-              if (err) {
-                reject();
-              } else {
-                resolve();
-              }
-            });
+            dbCollection.child(key)
+              .set(saveDataSum, err => (err ? reject : resolve)());
           });
-
-        return true;
       });
-    });
+
+    return Promise.all([
+      createGroupFn(dbWeatherByHour, hourBegin, t.toISOString().substr(0, 13)),
+      createGroupFn(dbWeatherByDay, dayBegin, t.toISOString().substr(0, 10))
+    ]);
   }
 
 };
