@@ -3,8 +3,9 @@
   <head>
     <meta charset="UTF-8">
     <script src="https://www.gstatic.com/firebasejs/5.9.1/firebase.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.13.0/moment.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/locale/cs.js"></script> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.min.js"></script>
     <title>Home</title>
   </head>
   <body>
@@ -18,7 +19,6 @@
       const projectId = 'xxxxxxxxx';
       const apiKey = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
       const credentials = ['xxxxxxx@gmail.com', 'xxxxxxx'];
-      const collection = 'weatherByHour';
       const limit = 7 * 24;
 
 
@@ -93,7 +93,12 @@
             position: 'nearest',
             intersect: true,
             callbacks: {
-              title: TooltipItems => `${moment(new Date(TooltipItems[0].label)).format('D. M. H:mm')} (øh)`,
+              title: (TooltipItems, obj) => {
+                const firstItem = TooltipItems[0];
+                const dataset = obj.datasets[firstItem.datasetIndex];
+                const date = dataset.data[firstItem.index].x;
+                return `${moment(date).format('dd D. M. H:mm')} (øh)`;
+              },
               label: (TooltipItem, obj) => {
                 const dataset = obj.datasets[TooltipItem.datasetIndex];
                 return `${dataset.label}: ${TooltipItem.yLabel.toLocaleString()} ${dataset.unit}`
@@ -161,7 +166,7 @@
       });
 
       firebase.auth().signInWithEmailAndPassword(...credentials).then(() => {
-        getDataFromFirebaseDb(collection, limit, (data) => {
+        getDataFromFirebaseDb('weatherByHour', limit, (data) => {
           const dataTemperature = [];
           const dataHumidity = [];
           const dataTemperatureOutside = [];
@@ -169,21 +174,22 @@
 
           data.forEach((record) => {
             const { date, temperature, humidity, temperatureOutside, humidityOutside } = record;
+            const dateBegin = new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours());
 
             dataTemperature.push({
-              x: date,
+              x: dateBegin,
               y: temperature
             });
             dataHumidity.push({
-              x: date,
+              x: dateBegin,
               y: humidity
             });
             dataTemperatureOutside.push({
-              x: date,
+              x: dateBegin,
               y: temperatureOutside
             });
             dataHumidityOutside.push({
-              x: date,
+              x: dateBegin,
               y: humidityOutside
             });
           });
