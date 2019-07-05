@@ -23,28 +23,6 @@
       const credentials = ['xxxxxxx@gmail.com', 'xxxxxxx'];
       const limit = 7 * 24;
 
-
-      /**
-       * Functions
-       */
-
-      function getDataFromFirebaseDb(collection, limit, callback) {
-        firebase.database()
-          .ref(collection)
-          .orderByChild('date')
-          .limitToLast(limit)
-          .on('value', (snapshot) => {
-            const data = Object.values(snapshot.val())
-              .map((record) => ({
-                ...record,
-                date: new Date(record.date)
-              }));
-
-            callback(data);
-          });
-      }
-
-
       /**
        * Chart
        */
@@ -168,44 +146,69 @@
       });
 
       firebase.auth().signInWithEmailAndPassword(...credentials).then(() => {
-        getDataFromFirebaseDb('weatherByHour', limit, (data) => {
-          const dataTemperature = [];
-          const dataHumidity = [];
-          const dataTemperatureOutside = [];
-          const dataHumidityOutside = [];
+        const range = firebase.database()
+          .ref('weather')
+          .orderByChild('temperature');
 
-          data.forEach((record) => {
-            const { date, temperature, humidity, temperatureOutside, humidityOutside } = record;
-            const dateBegin = new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours());
-
-            dataTemperature.push({
-              x: dateBegin,
-              y: temperature
-            });
-            dataHumidity.push({
-              x: dateBegin,
-              y: humidity
-            });
-            dataTemperatureOutside.push({
-              x: dateBegin,
-              y: temperatureOutside
-            });
-            dataHumidityOutside.push({
-              x: dateBegin,
-              y: humidityOutside
-            });
+        range.limitToFirst(1)
+          .on('value', (snapshot) => {
+            const temp = Object.values(snapshot.val())[0].temperature;
+            console.log('Min temperature:', temp, '°C');
           });
 
-          chart.data.datasets[0].data = dataTemperature;
-          chart.data.datasets[1].data = dataHumidity;
-          chart.data.datasets[2].data = dataTemperatureOutside;
-          chart.data.datasets[3].data = dataHumidityOutside;
+        range.limitToLast(1)
+          .on('value', (snapshot) => {
+            const temp = Object.values(snapshot.val())[0].temperature;
+            console.log('Max temperature:', temp, '°C');
+          });
 
-          document.getElementById('loading').style.display = 'none';
-          chart.canvas.style.display = 'block';
+        firebase.database()
+          .ref('weatherByHour')
+          .orderByChild('date')
+          .limitToLast(limit)
+          .on('value', (snapshot) => {
+            const dataTemperature = [];
+            const dataHumidity = [];
+            const dataTemperatureOutside = [];
+            const dataHumidityOutside = [];
 
-          chart.update();
-        });
+            Object.values(snapshot.val())
+              .map((record) => ({
+                ...record,
+                date: new Date(record.date)
+              }))
+              .forEach((record) => {
+                const { date, temperature, humidity, temperatureOutside, humidityOutside } = record;
+                const dateBegin = new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours());
+
+                dataTemperature.push({
+                  x: dateBegin,
+                  y: temperature
+                });
+                dataHumidity.push({
+                  x: dateBegin,
+                  y: humidity
+                });
+                dataTemperatureOutside.push({
+                  x: dateBegin,
+                  y: temperatureOutside
+                });
+                dataHumidityOutside.push({
+                  x: dateBegin,
+                  y: humidityOutside
+                });
+              });
+
+            chart.data.datasets[0].data = dataTemperature;
+            chart.data.datasets[1].data = dataHumidity;
+            chart.data.datasets[2].data = dataTemperatureOutside;
+            chart.data.datasets[3].data = dataHumidityOutside;
+
+            document.getElementById('loading').style.display = 'none';
+            chart.canvas.style.display = 'block';
+
+            chart.update();
+          });
       });
     </script>
   </body>
