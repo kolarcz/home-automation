@@ -254,12 +254,12 @@ const oledRedraw = () => {
   const cpu = String(systemState.cpu).padStart(3);
   const uptime = {
     days: String(systemState.uptimeDays).padStart(4),
-    hours: String(systemState.uptimeHours).padStart(2),
+    hours: String(systemState.uptimeHours).padStart(2, '0'),
     minutes: String(systemState.uptimeMinutes).padStart(2, '0')
   };
 
   oled.setCursor(33, 1);
-  oled.writeString(font, 1, `${cpu} %${uptime.days} ${uptime.hours}:${uptime.minutes}`);
+  oled.writeString(font, 1, `${cpu} %${uptime.days}/${uptime.hours}:${uptime.minutes}`);
 
   oled.setCursor(33, 15);
   oled.writeString(font, 1, `  ${tempOut}°C ${tempIn}°C`);
