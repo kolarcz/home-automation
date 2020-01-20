@@ -148,18 +148,19 @@
       firebase.auth().signInWithEmailAndPassword(...credentials).then(() => {
         const range = firebase.database()
           .ref('weather')
-          .orderByChild('temperature');
+          .orderByChild('temperature')
+          .startAt(-999);
 
         range.limitToFirst(1)
           .on('value', (snapshot) => {
-            const temp = Object.values(snapshot.val())[0].temperature;
-            console.log('Min temperature:', temp, '°C');
+            const { temperature, date } = Object.values(snapshot.val())[0] || {};
+            console.log('Min temperature:', temperature, '°C /', new Date(date));
           });
 
         range.limitToLast(1)
           .on('value', (snapshot) => {
-            const temp = Object.values(snapshot.val())[0].temperature;
-            console.log('Max temperature:', temp, '°C');
+            const { temperature, date } = Object.values(snapshot.val())[0] || {};
+            console.log('Max temperature:', temperature, '°C /', new Date(date));
           });
 
         firebase.database()

@@ -17,7 +17,17 @@ module.exports = class TempDHT22 extends EventEmitter {
     if (pinPower) {
       wiringPi.setup('gpio');
       wiringPi.pinMode(pinPower, wiringPi.OUTPUT);
-      wiringPi.digitalWrite(pinPower, wiringPi.HIGH);
+
+      const reset = () => {
+        wiringPi.digitalWrite(pinPower, wiringPi.LOW);
+        setTimeout(() =>
+          wiringPi.digitalWrite(pinPower, wiringPi.HIGH)
+          , 1000
+        );
+      };
+
+      setInterval(reset, 60 * 60 * 1000);
+      reset();
     }
 
     const dht = new rpiDhtSensor.DHT22(pinData);

@@ -32,6 +32,7 @@
     "request": "^2.81.0",
     "rpi-dht-sensor": "^0.1.1",
     "suncalc": "^1.8.0",
+    "throat": "^5.0.0",
     "w1temp": "^4.0.2",
     "wiring-pi": "^2.2.1",
     "wol": "^1.0.3",

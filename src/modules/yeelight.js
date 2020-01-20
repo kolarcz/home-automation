@@ -1,26 +1,39 @@
 const EventEmitter = require('events');
 const yeelight = require('yeelight-awesome');
+const throat = require('throat');
 
 module.exports = class Yeelight extends EventEmitter {
 
   constructor(ipAddress, durationChange = 1000) {
     super();
 
-    this.yeelight = new yeelight.Yeelight({ lightIp: ipAddress });
-    this.yeelightActualize = new yeelight.Yeelight({ lightIp: ipAddress });
-
+    this.throat = throat(1);
     this.duration = durationChange;
-
     this.state = {};
+
+    this.yeelight = new yeelight.Yeelight({ lightIp: ipAddress });
+    this.yeelight.on('error', () => {});
 
     const actualize = async () => {
       setTimeout(actualize, 10 * 1000);
-      const yl = await this.yeelightActualize.connect();
-      await this._actualizeState(yl);
-      await yl.disconnect();
+
+      try {
+        await this._connectRunActualize();
+      } catch (err) {}
     };
 
     actualize();
+  }
+
+  async _connectRunActualize(fn) {
+    return this.throat(async () => {
+      const yl = await this.yeelight.connect();
+
+      if (fn) await fn(yl);
+
+      await this._actualizeState(yl);
+      await yl.disconnect();
+    });
   }
 
   async setColor(hexColor, brightness = undefined, turnOn = true) {
@@ -37,20 +50,18 @@ module.exports = class Yeelight extends EventEmitter {
 
     const color = new yeelight.Color(null, null, null, hexColor.substr(1));
 
-    const yl = await this.yeelight.connect();
-    await yl.stopColorFlow();
-    await yl.setRGB(color, 'smooth', this.duration);
+    await this._connectRunActualize(async (yl) => {
+      await yl.stopColorFlow();
+      await yl.setRGB(color, 'smooth', this.duration);
 
-    if (brightness !== undefined) {
-      await yl.setBright(brightnessN, 'smooth', this.duration);
-    }
+      if (brightness !== undefined) {
+        await yl.setBright(brightnessN, 'smooth', this.duration);
+      }
 
-    if (turnOn) {
-      await yl.setPower(true, 'smooth', this.duration);
-    }
-
-    await this._actualizeState(yl);
-    await yl.disconnect();
+      if (turnOn) {
+        await yl.setPower(true, 'smooth', this.duration);
+      }
+    });
   }
 
   async setTemperature(temperature, brightness = undefined, turnOn = true) {
@@ -66,20 +77,18 @@ module.exports = class Yeelight extends EventEmitter {
       throw new Error('Invalid turnOn, valid type is boolen');
     }
 
-    const yl = await this.yeelight.connect();
-    await yl.stopColorFlow();
-    await yl.setCtAbx(temperatureN, 'smooth', this.duration);
+    await this._connectRunActualize(async (yl) => {
+      await yl.stopColorFlow();
+      await yl.setCtAbx(temperatureN, 'smooth', this.duration);
 
-    if (brightness !== undefined) {
-      await yl.setBright(brightnessN, 'smooth', this.duration);
-    }
+      if (brightness !== undefined) {
+        await yl.setBright(brightnessN, 'smooth', this.duration);
+      }
 
-    if (turnOn) {
-      await yl.setPower(true, 'smooth', this.duration);
-    }
-
-    await this._actualizeState(yl);
-    await yl.disconnect();
+      if (turnOn) {
+        await yl.setPower(true, 'smooth', this.duration);
+      }
+    });
   }
 
   async setBrightness(brightness, turnOn = true) {
@@ -91,31 +100,40 @@ module.exports = class Yeelight extends EventEmitter {
       throw new Error('Invalid turnOn, valid type is boolen');
     }
 
-    const yl = await this.yeelight.connect();
-    await yl.setBright(brightnessN, 'smooth', this.duration);
+    await this._connectRunActualize(async (yl) => {
+      await yl.setBright(brightnessN, 'smooth', this.duration);
 
-    if (turnOn) {
-      await yl.setPower(true, 'smooth', this.duration);
+      if (turnOn) {
+        await yl.setPower(true, 'smooth', this.duration);
+      }
+    });
+  }
+
+  async toggle(power) {
+    if (power !== undefined && typeof power !== 'boolean') {
+      throw new Error('Invalid power parameter, valid type is boolen or undefined');
     }
 
-    await this._actualizeState(yl);
-    await yl.disconnect();
+    let powerSet;
+
+    if (power === undefined) {
+      const { power: powerState } = await this.getState();
+      powerSet = !powerState;
+    } else {
+      powerSet = power;
+    }
+
+    await this._connectRunActualize(async (yl) => {
+      await yl.setPower(powerSet, 'smooth', this.duration);
+    });
   }
 
   async turnOn() {
-    const yl = await this.yeelight.connect();
-    await yl.setPower(true, 'smooth', this.duration);
-
-    await this._actualizeState(yl);
-    await yl.disconnect();
+    this.toggle(true);
   }
 
   async turnOff() {
-    const yl = await this.yeelight.connect();
-    await yl.setPower(false, 'smooth', this.duration);
-
-    await this._actualizeState(yl);
-    await yl.disconnect();
+    this.toggle(false);
   }
 
   async _actualizeState(yl) {
@@ -152,9 +170,7 @@ module.exports = class Yeelight extends EventEmitter {
 
   async getState(forceActualize = true) {
     if (forceActualize) {
-      const yl = await this.yeelight.connect();
-      await this._actualizeState(yl);
-      await yl.disconnect();
+      await this._connectRunActualize();
     }
 
     return this.state;

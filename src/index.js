@@ -31,7 +31,7 @@ const FirebaseDb = require('./modules/firebase-database');
 
 const numbFixed = (number, fixed = 0) => {
   if (Number.isFinite(number)) {
-    const result = Number(number).toFixed(fixed).replace('.', ',');
+    const result = Number(number).toFixed(fixed).replace('.', ',').replace(/^-0$/, '0');
     return result;
   }
 
@@ -117,16 +117,14 @@ const firebaseDb = new FirebaseDb(
  ************************************************************************************************ */
 
 const actualizeLametricAppLight = async () => {
-  let isLightOn = await yeelight.getState(false);
+  try {
+    const { power } = await yeelight.getState();
 
-  if (isLightOn === undefined) {
-    isLightOn = await yeelight.getState().power;
-  }
-
-  lametric.updateWidget('light', [{
-    icon: isLightOn ? icons.light_on : icons.light_off,
-    text: isLightOn ? 'off' : 'on'
-  }]);
+    lametric.updateWidget('light', [{
+      icon: power ? icons.light_on : icons.light_off,
+      text: power ? 'off' : 'on'
+    }]);
+  } catch (err) {}
 };
 
 setInterval(actualizeLametricAppLight, 60 * 1000);
@@ -175,49 +173,57 @@ tempDht22.on('change', ({ temp }) => {
 });
 
 bt.on('change', async (state) => {
-  if (!state.inRange) {
-    firstMove = false;
-    if (storage) storage.set('firstMove', firstMove);
+  try {
+    if (!state.inRange) {
+      firstMove = false;
+      if (storage) storage.set('firstMove', firstMove);
 
-    if (automation) {
-      swtch.send('B', true);
-      lametric.sendAction('radio.stop');
-      await yeelight.turnOff();
+      if (automation) {
+        swtch.send('B', true);
+        lametric.sendAction('radio.stop');
+        await yeelight.turnOff();
+      }
+    } else if (automation) {
+      swtch.send('B', false);
     }
-  } else if (automation) {
-    swtch.send('B', false);
-  }
+  } catch (err) {}
 });
 
 pir.on('move', async () => {
-  const { inRange } = bt.getState();
-  const { isNight } = sun.getState();
+  try {
+    const { inRange } = bt.getState();
+    const { isNight } = sun.getState();
 
-  if (!firstMove) {
-    firstMove = true;
-    if (storage) storage.set('firstMove', firstMove);
+    if (!firstMove) {
+      firstMove = true;
+      if (storage) storage.set('firstMove', firstMove);
 
-    if (inRange) {
-      if (isNight && automation) {
-        await yeelight.turnOn();
+      if (inRange) {
+        if (isNight && automation) {
+          await yeelight.turnOn();
+        }
+      } else {
+        notify.send('alarm');
       }
-    } else {
-      notify.send('alarm');
     }
-  }
+  } catch (err) {}
 });
 
 sun.on('sunset', async () => {
-  const { inRange } = bt.getState();
-  if (inRange && automation) {
-    await yeelight.turnOn();
-  }
+  try {
+    const { inRange } = bt.getState();
+    if (inRange && automation) {
+      await yeelight.turnOn();
+    }
+  } catch (err) {}
 });
 
 sun.on('sunrise', async () => {
-  if (automation) {
-    await yeelight.turnOff();
-  }
+  try {
+    if (automation) {
+      await yeelight.turnOff();
+    }
+  } catch (err) {}
 });
 
 yeelight.on('change',
@@ -291,9 +297,12 @@ app.use((req, res, next) => {
 });
 
 app.get('/api/light-toggle', async (req, res) => {
-  const { power } = await yeelight.getState();
-  await yeelight[power ? 'turnOff' : 'turnOn']();
-  res.send('ok');
+  try {
+    await yeelight.toggle();
+    res.send('ok');
+  } catch (err) {
+    res.status(400).send(err.toString());
+  }
 });
 
 app.get('/api/light-on', async (req, res) => {
@@ -312,8 +321,12 @@ app.get('/api/light-on', async (req, res) => {
 });
 
 app.get('/api/light-off', async (req, res) => {
-  await yeelight.turnOff();
-  res.send('ok');
+  try {
+    await yeelight.turnOff();
+    res.send('ok');
+  } catch (err) {
+    res.status(400).send(err.toString());
+  }
 });
 
 app.get('/api/cam-toggle', (req, res) => {
@@ -374,8 +387,5 @@ app.get('/api/info', async (req, res) => {
 });
 
 app.listen(81, () =>
-  console.info(
-    dateformat('yyyy-mm-dd HH:MM:ss'),
-    'Listening...'
-  )
+  console.info('Listening...')
 );
