@@ -10,9 +10,17 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.min.js"></script>
     <link rel="icon" href="data:image/svg+xml,%3Csvg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M23 24c0 3.9-3.1 7-7 7s-7-3.1-7-7c0-2.3 1.1-4.4 3-5.7V5c0-2.2 1.8-4 4-4s4 1.8 4 4v13.3c1.9 1.3 3 3.4 3 5.7z' fill='%23E92662'/%3E%3Cpath d='M20 24c0 2.2-1.8 4-4 4s-4-1.8-4-4c0-1.9 1.3-3.4 3-3.9V13c0-.5.5-1 1-1s1 .5 1 1v7.1c1.7.5 3 2 3 3.9z' fill='%23FFC10A'/%3E%3C/svg%3E" />
     <title>Home</title>
+    <style>
+      body { background-color: #fff; }
+      #loading { fill: #ebebeb; }
+      @media (prefers-color-scheme: dark) {
+        body { background-color: #171717; }
+        #loading { fill: #3a3a3a; }
+      }
+    </style>
   </head>
   <body>
-    <svg id="loading" width="100%" height="80" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid"><circle cx="84" cy="50" r="0" fill="#ebebeb"><animate attributeName="r" values="10;0;0;0;0" keyTimes="0;0.25;0.5;0.75;1" keySplines="0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1" calcMode="spline" dur="1.5s" repeatCount="indefinite" begin="0s"/><animate attributeName="cx" values="84;84;84;84;84" keyTimes="0;0.25;0.5;0.75;1" keySplines="0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1" calcMode="spline" dur="1.5s" repeatCount="indefinite" begin="0s"/></circle><circle cx="84" cy="50" r=".117" fill="#ebebeb"><animate attributeName="r" values="0;10;10;10;0" keyTimes="0;0.25;0.5;0.75;1" keySplines="0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1" calcMode="spline" dur="1.5s" repeatCount="indefinite" begin="-0.75s"/><animate attributeName="cx" values="16;16;50;84;84" keyTimes="0;0.25;0.5;0.75;1" keySplines="0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1" calcMode="spline" dur="1.5s" repeatCount="indefinite" begin="-0.75s"/></circle><circle cx="83.603" cy="50" r="10" fill="#ebebeb"><animate attributeName="r" values="0;10;10;10;0" keyTimes="0;0.25;0.5;0.75;1" keySplines="0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1" calcMode="spline" dur="1.5s" repeatCount="indefinite" begin="-0.375s"/><animate attributeName="cx" values="16;16;50;84;84" keyTimes="0;0.25;0.5;0.75;1" keySplines="0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1" calcMode="spline" dur="1.5s" repeatCount="indefinite" begin="-0.375s"/></circle><circle cx="49.603" cy="50" r="10" fill="#ebebeb"><animate attributeName="r" values="0;10;10;10;0" keyTimes="0;0.25;0.5;0.75;1" keySplines="0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1" calcMode="spline" dur="1.5s" repeatCount="indefinite" begin="0s"/><animate attributeName="cx" values="16;16;50;84;84" keyTimes="0;0.25;0.5;0.75;1" keySplines="0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1" calcMode="spline" dur="1.5s" repeatCount="indefinite" begin="0s"/></circle><circle cx="16" cy="50" r="9.883" fill="#ebebeb"><animate attributeName="r" values="0;0;10;10;10" keyTimes="0;0.25;0.5;0.75;1" keySplines="0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1" calcMode="spline" dur="1.5s" repeatCount="indefinite" begin="0s"/><animate attributeName="cx" values="16;16;16;50;84" keyTimes="0;0.25;0.5;0.75;1" keySplines="0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1" calcMode="spline" dur="1.5s" repeatCount="indefinite" begin="0s"/></circle></svg>
+    <svg id="loading" width="100%" height="80" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid"><circle cx="84" cy="50" r="0" fill="inherit"><animate attributeName="r" values="10;0;0;0;0" keyTimes="0;0.25;0.5;0.75;1" keySplines="0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1" calcMode="spline" dur="1.5s" repeatCount="indefinite" begin="0s"/><animate attributeName="cx" values="84;84;84;84;84" keyTimes="0;0.25;0.5;0.75;1" keySplines="0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1" calcMode="spline" dur="1.5s" repeatCount="indefinite" begin="0s"/></circle><circle cx="84" cy="50" r=".117" fill="inherit"><animate attributeName="r" values="0;10;10;10;0" keyTimes="0;0.25;0.5;0.75;1" keySplines="0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1" calcMode="spline" dur="1.5s" repeatCount="indefinite" begin="-0.75s"/><animate attributeName="cx" values="16;16;50;84;84" keyTimes="0;0.25;0.5;0.75;1" keySplines="0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1" calcMode="spline" dur="1.5s" repeatCount="indefinite" begin="-0.75s"/></circle><circle cx="83.603" cy="50" r="10" fill="inherit"><animate attributeName="r" values="0;10;10;10;0" keyTimes="0;0.25;0.5;0.75;1" keySplines="0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1" calcMode="spline" dur="1.5s" repeatCount="indefinite" begin="-0.375s"/><animate attributeName="cx" values="16;16;50;84;84" keyTimes="0;0.25;0.5;0.75;1" keySplines="0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1" calcMode="spline" dur="1.5s" repeatCount="indefinite" begin="-0.375s"/></circle><circle cx="49.603" cy="50" r="10" fill="inherit"><animate attributeName="r" values="0;10;10;10;0" keyTimes="0;0.25;0.5;0.75;1" keySplines="0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1" calcMode="spline" dur="1.5s" repeatCount="indefinite" begin="0s"/><animate attributeName="cx" values="16;16;50;84;84" keyTimes="0;0.25;0.5;0.75;1" keySplines="0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1" calcMode="spline" dur="1.5s" repeatCount="indefinite" begin="0s"/></circle><circle cx="16" cy="50" r="9.883" fill="inherit"><animate attributeName="r" values="0;0;10;10;10" keyTimes="0;0.25;0.5;0.75;1" keySplines="0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1" calcMode="spline" dur="1.5s" repeatCount="indefinite" begin="0s"/><animate attributeName="cx" values="16;16;16;50;84" keyTimes="0;0.25;0.5;0.75;1" keySplines="0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1;0 0.5 0.5 1" calcMode="spline" dur="1.5s" repeatCount="indefinite" begin="0s"/></circle></svg>
     <canvas id="chart" style="display: none"></canvas>
     <script>
       /**
@@ -25,39 +33,56 @@
       const limit = 7 * 24;
 
       /**
+       * Colors
+       */
+      const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const COLOR_RED = isDarkMode ? '#f22' : 'red';
+      const COLOR_RED_BORDER = isDarkMode ? '#b22' : '#f88';
+      const COLOR_RED_LIGHT = isDarkMode ? '#422' : '#ffd9d9';
+      const COLOR_RED_LIGHT_BORDER = isDarkMode ? '#331a1a' : '#ffe9e9';
+      const COLOR_BLUE = isDarkMode ? '#44f' : 'blue';
+      const COLOR_BLUE_BORDER = isDarkMode ? '#33b' : '#88f';
+      const COLOR_BLUE_LIGHT = isDarkMode ? '#224' : '#d9d9ff';
+      const COLOR_BLUE_LIGHT_BORDER = isDarkMode ? '#1a1a33' : '#e9e9ff';
+      const COLOR_GRAY = isDarkMode ? '#999' : '#666';
+      const COLOR_GRAY_LIGHT = isDarkMode ? 'rgba(255, 255, 255, .05)' : 'rgba(0, 0, 0, .05)';
+
+      /**
        * Chart
        */
 
       const ctx = document.getElementById('chart').getContext('2d');
+
+      Chart.defaults.global.defaultFontColor = COLOR_GRAY;
 
       const chart = new Chart(ctx, {
         type: 'line',
         data: {
           datasets: [{
             label: 'Temperature',
-            backgroundColor: '#ff8888',
-            borderColor: 'red',
+            backgroundColor: COLOR_RED_BORDER,
+            borderColor: COLOR_RED,
             yAxisID: 'id-temperature',
             fill: false,
             unit: '°C'
           }, {
             label: 'Humidity',
-            backgroundColor: '#8888ff',
-            borderColor: 'blue',
+            backgroundColor: COLOR_BLUE_BORDER,
+            borderColor: COLOR_BLUE,
             yAxisID: 'id-humidity',
             fill: false,
             unit: '%'
           }, {
             label: 'Temperature outside',
-            backgroundColor: '#ffe9e9',
-            borderColor: '#ffd9d9',
+            backgroundColor: COLOR_RED_LIGHT_BORDER,
+            borderColor: COLOR_RED_LIGHT,
             yAxisID: 'id-temperature',
             fill: false,
             unit: '°C'
           }, {
             label: 'Humidity outside',
-            backgroundColor: '#e9e9ff',
-            borderColor: '#d9d9ff',
+            backgroundColor: COLOR_BLUE_LIGHT_BORDER,
+            borderColor: COLOR_BLUE_LIGHT,
             yAxisID: 'id-humidity',
             fill: false,
             unit: '%'
@@ -93,6 +118,9 @@
                 display: true,
                 labelString: 'Time'
               },
+              gridLines: {
+                color: COLOR_GRAY_LIGHT
+              },
               time: {
                 unit: 'hour',
                 displayFormats: {
@@ -109,6 +137,9 @@
                 display: true,
                 labelString: 'Temperature'
               },
+              gridLines: {
+                color: COLOR_GRAY_LIGHT
+              },
               position: 'left',
               id: 'id-temperature',
               ticks: {
@@ -121,11 +152,12 @@
                 display: true,
                 labelString: 'Humidity'
               },
+              gridLines: {
+                drawOnChartArea: false,
+                color: COLOR_GRAY_LIGHT
+              },
               position: 'right',
               id: 'id-humidity',
-              gridLines: {
-                drawOnChartArea: false
-              },
               ticks: {
                 callback: tick => `${tick.toLocaleString()} %`,
                 padding: 10
