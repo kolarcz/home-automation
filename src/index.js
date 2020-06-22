@@ -59,7 +59,7 @@ if (storage) {
  INSTANCES
  ************************************************************************************************ */
 
-const oled = new Oled(i2c.openSync(1), {
+const oled = new Oled(i2c.openSync(3), {
   width: 128,
   height: 32
 });
