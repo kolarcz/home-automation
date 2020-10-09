@@ -31,12 +31,13 @@ const FirebaseDb = require('./modules/firebase-database');
 
 const numbFixed = (number, fixed = 0) => {
   if (Number.isFinite(number)) {
-    const result = Number(number).toFixed(fixed).replace('.', ',').replace(/^-0$/, '0');
-    return result;
+    const pow = Math.pow(10, fixed);
+    const result = Math.round(number * pow) / pow;
+    return result === -0 ? 0 : result;
   }
 
-  return '?';
-};
+  return NaN;
+}
 
 
 /* ************************************************************************************************
@@ -252,10 +253,10 @@ const oledRedraw = () => {
   const tempDht22State = tempDht22.getState();
   const tempProviderState = tempProvider.getState();
 
-  const tempOut = numbFixed(tempProviderState.temp).padStart(3);
-  const humidityOut = numbFixed(tempProviderState.humidity).padStart(3);
-  const tempIn = numbFixed(tempDht22State.temp, 1).padStart(5);
-  const humidityIn = numbFixed(tempDht22State.humidity, 1).padStart(5);
+  const tempOut = numbFixed(tempProviderState.temp).toLocaleString().padStart(3);
+  const humidityOut = numbFixed(tempProviderState.humidity).toLocaleString().padStart(3);
+  const tempIn = numbFixed(tempDht22State.temp, 1).toLocaleString().padStart(5);
+  const humidityIn = numbFixed(tempDht22State.humidity, 1).toLocaleString().padStart(5);
 
   const cpu = String(systemState.cpu).padStart(3);
   const uptime = {
@@ -364,26 +365,59 @@ app.get('/api/info', async (req, res) => {
   const systemState = system.getState();
   const yeelightState = await yeelight.getState(false);
 
-  const dateFormat = 'd. m. H:MM:ss';
-  const uptimeDate = dateformat(systemState.uptimeStart, dateFormat);
-  const lastPirDate = pirState.last ? dateformat(pirState.last, dateFormat) : '---';
-
-  const providerIcons = {
-    temp: emoji.weather[tempProviderState.tempIcon] || emoji.weather['clear-day'],
-    pop: emoji.weather[tempProviderState.popIcon] || emoji.weather.rain
+  const tempIn = {
+    tempC: numbFixed(tempDht22State.temp, 1),
+    humidityP: numbFixed(tempDht22State.humidity, 1)
   };
 
-  res.send(`
-    ${emoji.thermometer} ${numbFixed(tempDht22State.temp, 1)}°C ${numbFixed(tempDht22State.humidity, 1)}% &nbsp;
-    ${providerIcons.temp} ${numbFixed(tempProviderState.temp)}°C ${numbFixed(tempProviderState.humidity)}% &nbsp;
-    ${providerIcons.pop} ${numbFixed(tempProviderState.pop)}%<br>
-    🏃 ${lastPirDate} &nbsp; 🕰 ${uptimeDate}<br>
-    📹 ${swtchState.B ? 'on' : 'off'} &nbsp;
-    🔔 ${firstMove ? 'y' : 'n'} &nbsp;
-    🤖 ${automation ? 'y' : 'n'} &nbsp;
-    📍 ${btState.inRange ? 'in' : 'out'}<br>
-    💡 ${yeelightState.power ? `${yeelightState.color || `${yeelightState.temperature}k`} ${yeelightState.brightness}%` : 'off'}
-  `);
+  const tempOut = {
+    tempC: numbFixed(tempProviderState.temp),
+    humidityP: numbFixed(tempProviderState.humidity),
+    popP: numbFixed(tempProviderState.pop),
+    icons: {
+      temp: emoji.weather[tempProviderState.tempIcon] || emoji.weather['clear-day'],
+      pop: emoji.weather[tempProviderState.popIcon] || emoji.weather.rain
+    }
+  };
+
+  let data;
+
+  if (req.query.type === 'json') {
+    data = {
+      tempIn,
+      tempOut,
+      light: {
+        power: yeelightState.power,
+        color: yeelightState.color || null,
+        temperature: yeelightState.color ? null : yeelightState.temperature,
+        brightness: yeelightState.brightness
+      },
+      move: pirState.last || null,
+      uptime: systemState.uptimeStart,
+      cam: swtchState.B,
+      alert: firstMove,
+      automation: automation,
+      in: btState.inRange
+    };
+  } else {
+    const dateFormat = 'd. m. H:MM:ss';
+    const uptimeDate = dateformat(systemState.uptimeStart, dateFormat);
+    const lastPirDate = pirState.last ? dateformat(pirState.last, dateFormat) : '---';
+
+    data = `
+      ${emoji.thermometer} ${tempIn.tempC.toLocaleString()}°C ${tempIn.humidityP.toLocaleString()}% &nbsp;
+      ${tempOut.icons.temp} ${tempOut.tempC.toLocaleString()}°C ${tempOut.humidityP.toLocaleString()}% &nbsp;
+      ${tempOut.icons.pop} ${tempOut.popP.toLocaleString()}%<br>
+      🏃 ${lastPirDate} &nbsp; 🕰 ${uptimeDate}<br>
+      📹 ${swtchState.B ? 'on' : 'off'} &nbsp;
+      🔔 ${firstMove ? 'y' : 'n'} &nbsp;
+      🤖 ${automation ? 'y' : 'n'} &nbsp;
+      📍 ${btState.inRange ? 'in' : 'out'}<br>
+      💡 ${yeelightState.power ? `${yeelightState.color || `${yeelightState.temperature}k`} ${yeelightState.brightness}%` : 'off'}
+    `;
+  }
+
+  res.send(data);
 });
 
 app.listen(81, () =>
